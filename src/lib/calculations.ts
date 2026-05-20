@@ -252,26 +252,32 @@ export function generateEmpiricalFormula(
 }
 
 export function identifyMineral(results: CalculationResult[], mineralDb: MineralData[]): { name: string; score: number }[] {
+  const EXCLUDED_FOR_COMPARE = ["O", "H"];
+  
   const calcRatios: Record<string, number> = {};
   results.forEach(res => {
     const symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
-    calcRatios[symbol] = res["Atomic Ratio"];
+    // Only compare non-volatile/non-oxygen elements to focus on cation/anion framework
+    if (!EXCLUDED_FOR_COMPARE.includes(symbol)) {
+      calcRatios[symbol] = res["Atomic Ratio"];
+    }
   });
 
   const scores = mineralDb.map(mineral => {
     const dbCounts = parseComplexFormula(mineral.formula);
-    const dbCations: Record<string, number> = {};
+    const dbCompareProps: Record<string, number> = {};
+    
     for (const [k, v] of Object.entries(dbCounts)) {
-      if (!["O", "H", "C", "S", "Cl", "F"].includes(k)) {
-        dbCations[k] = v;
+      if (!EXCLUDED_FOR_COMPARE.includes(k)) {
+        dbCompareProps[k] = v;
       }
     }
 
-    const allCations = new Set([...Object.keys(calcRatios), ...Object.keys(dbCations)]);
+    const allElements = new Set([...Object.keys(calcRatios), ...Object.keys(dbCompareProps)]);
     let score = 0;
-    allCations.forEach(cation => {
-      const calcVal = calcRatios[cation] || 0;
-      const dbVal = dbCations[cation] || 0;
+    allElements.forEach(el => {
+      const calcVal = calcRatios[el] || 0;
+      const dbVal = dbCompareProps[el] || 0;
       score += Math.pow(dbVal - calcVal, 2);
     });
 
