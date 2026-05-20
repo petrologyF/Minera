@@ -22,6 +22,11 @@ export default function Home() {
   const [formula, setFormula] = useState<string>("");
   const [candidates, setCandidates] = useState<{ name: string; score: number }[]>([]);
 
+  // New normalization states
+  const [elNormMode, setElNormMode] = useState<"none" | "stoichiometric-oxygen" | "element-ratio">("none");
+  const [elTargetElement, setElTargetElement] = useState<string>("");
+  const [elTargetValue, setElTargetValue] = useState<number>(1.0);
+
   const atomicWeightsMap = useMemo(() => {
     const map: Record<string, number> = {};
     periodicTableData.forEach(item => {
@@ -37,9 +42,12 @@ export default function Home() {
         const next = prev.filter((i) => i !== item);
         const { [item]: _, ...rest } = wtPercents;
         setWtPercents(rest);
+        if (elTargetElement === item) setElTargetElement("");
         return next;
       } else {
-        return [...prev, item];
+        const next = [...prev, item];
+        if (!elTargetElement) setElTargetElement(item);
+        return next;
       }
     });
   };
@@ -62,12 +70,23 @@ export default function Home() {
     let calcResults: CalculationResult[];
     if (mode === "oxide") {
       calcResults = calculateOxideMode(input, atomicWeightsMap, targetOxygen);
+      setResults(calcResults);
+      setFormula(generateEmpiricalFormula(calcResults, { mode: "oxide", targetOxygen }));
     } else {
-      calcResults = calculateElementMode(input, atomicWeightsMap);
+      const norm = elNormMode === "none" ? undefined : {
+        mode: elNormMode,
+        targetValue: elNormMode === "stoichiometric-oxygen" ? targetOxygen : elTargetValue,
+        targetElement: elTargetElement
+      };
+      calcResults = calculateElementMode(input, atomicWeightsMap, norm);
+      setResults(calcResults);
+      setFormula(generateEmpiricalFormula(calcResults, { 
+        mode: "element", 
+        targetOxygen: elNormMode === "stoichiometric-oxygen" ? targetOxygen : undefined,
+        normalizationMode: elNormMode === "none" ? undefined : elNormMode
+      }));
     }
 
-    setResults(calcResults);
-    setFormula(generateEmpiricalFormula(calcResults, mode === "oxide" ? targetOxygen : undefined));
     setCandidates(identifyMineral(calcResults, mineralDb).slice(0, 5));
   };
 
@@ -167,7 +186,7 @@ export default function Home() {
               <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">3. Settings</h2>
               
               <div className="space-y-4">
-                {mode === "oxide" && (
+                {mode === "oxide" ? (
                   <div className="animate-in fade-in slide-in-from-top-1 duration-300">
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Oxygen Count</label>
                     <input
@@ -179,6 +198,60 @@ export default function Home() {
                     <p className="mt-2 text-[10px] text-gray-400 leading-relaxed">
                       Used in Oxide mode to calculate cation ratios (e.g., 4 for Olivine, 24 for Garnet).
                     </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Mode</label>
+                      <select
+                        value={elNormMode}
+                        onChange={(e) => setElNormMode(e.target.value as any)}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                      >
+                        <option value="none">None (Raw Proportions)</option>
+                        <option value="element-ratio">By Specific Element (e.g. S=1)</option>
+                        <option value="stoichiometric-oxygen">By Stoichiometric Oxygen</option>
+                      </select>
+                    </div>
+
+                    {elNormMode === "element-ratio" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Target Element</label>
+                          <select
+                            value={elTargetElement}
+                            onChange={(e) => setElTargetElement(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-sm px-2 py-1.5 text-sm focus:outline-none"
+                          >
+                            <option value="">Select...</option>
+                            {selectedItems.map(item => (
+                              <option key={item} value={item}>{item}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Target Value</label>
+                          <input
+                            type="number"
+                            value={elTargetValue}
+                            onChange={(e) => setElTargetValue(parseFloat(e.target.value) || 0)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-sm px-2 py-1.5 text-sm focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {elNormMode === "stoichiometric-oxygen" && (
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Oxygen Count</label>
+                        <input
+                          type="number"
+                          value={targetOxygen}
+                          onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
                 

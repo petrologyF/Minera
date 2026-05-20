@@ -74,7 +74,11 @@ export const DEFAULT_VALENCES: Record<string, number> = {
 export function calculateElementMode(
   input: { Item: string; "wt%": number }[],
   atomicWeights: Record<string, number>,
-  targetOxygen?: number
+  normalization?: {
+    mode: "stoichiometric-oxygen" | "element-ratio";
+    targetValue: number;
+    targetElement?: string;
+  }
 ): CalculationResult[] {
   const results: CalculationResult[] = input.map(row => {
     const weight = atomicWeights[row.Item] || 0;
@@ -84,11 +88,13 @@ export function calculateElementMode(
       "wt%": row["wt%"],
       "Atomic Weight": weight,
       "Atomic Proportion": prop,
-      "Atomic Ratio": prop // Initial
+      "Atomic Ratio": prop // Default to raw prop
     };
   });
 
-  if (targetOxygen !== undefined) {
+  if (!normalization) return results;
+
+  if (normalization.mode === "stoichiometric-oxygen") {
     let totalOProp = 0;
     results.forEach(res => {
       const valence = DEFAULT_VALENCES[res.Item] || 2;
@@ -97,7 +103,15 @@ export function calculateElementMode(
       totalOProp += oProp;
     });
 
-    const normFactor = totalOProp > 0 ? targetOxygen / totalOProp : 0;
+    const normFactor = totalOProp > 0 ? normalization.targetValue / totalOProp : 0;
+    results.forEach(res => {
+      res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * normFactor;
+    });
+  } else if (normalization.mode === "element-ratio" && normalization.targetElement) {
+    const targetRes = results.find(r => r.Item === normalization.targetElement);
+    const targetProp = targetRes?.["Atomic Proportion"] || 0;
+    const normFactor = targetProp > 0 ? normalization.targetValue / targetProp : 0;
+    
     results.forEach(res => {
       res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * normFactor;
     });
@@ -141,37 +155,86 @@ export function calculateOxideMode(
   return results;
 }
 
+// IUPAC/IMA standard ordering priorities for mineral formulas.
+// Lower values = appears earlier in the formula.
+// Grouping: Large Cations (A) -> Medium Cations (M) -> Network Formers (T) -> Anions
 export const CATION_ORDER: Record<string, number> = {
-  K: 10, Na: 20, Ca: 30, Ba: 40, Sr: 50,
-  Mg: 60, Fe: 70, Mn: 80, Ti: 90,
-  Al: 100, Cr: 110,
-  Si: 120, P: 130, S: 140
+  // 1. Alkali & Large Alkaline Earth Metals (Large/A-site)
+  Cs: 10, Rb: 20, K: 30, Na: 40, Li: 50,
+  Ba: 60, Sr: 70, Ca: 80,
+  
+  // 2. Rare Earth Elements (REE)
+  La: 100, Ce: 110, Pr: 120, Nd: 130, Sm: 140, Eu: 150, Gd: 160,
+  
+  // 3. Medium Cations (Transition metals, Mg, etc. / M-site)
+  Mg: 200, Fe: 210, Mn: 220, Ni: 230, Co: 240, Zn: 250, Cu: 260,
+  // High-valence medium cations
+  Al: 300, Cr: 310, V: 320, Sc: 330,
+  Ti: 340, Zr: 350, Sn: 360,
+  
+  // 4. Small Cations (Network Formers / T-site)
+  Si: 400, P: 410, B: 430,
+  
+  // 5. Anions
+  O: 1000, F: 1010, Cl: 1020, OH: 1030, S: 1040 // S as anion (standard for sulfides)
 };
 
-export function generateEmpiricalFormula(results: CalculationResult[], targetOxygen?: number): string {
-  const cationData: { priority: number; symbol: string; ratio: number }[] = [];
+export function generateEmpiricalFormula(
+  results: CalculationResult[], 
+  options?: {
+    mode: "element" | "oxide";
+    targetOxygen?: number;
+    normalizationMode?: "stoichiometric-oxygen" | "element-ratio";
+  }
+): string {
+  const elementsData: { priority: number; symbol: string; ratio: number; isAnion: boolean }[] = [];
 
   results.forEach(res => {
     const ratio = res["Atomic Ratio"];
-    if (ratio > 0.001) {
+    if (ratio > 0.0001) {
       const symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
       const priority = CATION_ORDER[symbol] || 999;
-      cationData.push({ priority, symbol, ratio });
+      const isAnion = priority >= 1000;
+      elementsData.push({ priority, symbol, ratio, isAnion });
     }
   });
 
-  cationData.sort((a, b) => a.priority - b.priority);
+  elementsData.sort((a, b) => a.priority - b.priority);
 
-  let formula = cationData.map(c => {
-    if (Math.abs(c.ratio - 1.0) < 0.005) return c.symbol;
-    return `${c.symbol}${c.ratio.toFixed(2)}`;
-  }).join("");
+  const formatRatio = (num: number) => {
+    if (Math.abs(num - Math.round(num)) < 0.001) {
+      const intVal = Math.round(num);
+      return intVal === 1 ? "" : intVal.toString();
+    }
+    return (Math.round(num * 100) / 100).toString();
+  };
 
-  if (targetOxygen !== undefined) {
-    if (Math.abs(targetOxygen - Math.round(targetOxygen)) < 0.001) {
-      formula += `O${Math.round(targetOxygen)}`;
-    } else {
-      formula += `O${targetOxygen.toFixed(1)}`;
+  let formula = elementsData
+    .filter(e => !e.isAnion)
+    .map(e => `${e.symbol}${formatRatio(e.ratio)}`)
+    .join("");
+
+  const otherAnions = elementsData.filter(e => e.isAnion && e.symbol !== "O");
+  otherAnions.forEach(a => {
+    formula += `${a.symbol}${formatRatio(a.ratio)}`;
+  });
+
+  // Handle Oxygen
+  if (options?.mode === "oxide") {
+    // In oxide mode, O is always appended based on targetOxygen
+    if (options.targetOxygen !== undefined) {
+      const roundedO = Math.round(options.targetOxygen * 100) / 100;
+      formula += `O${roundedO === 1 ? "" : roundedO}`;
+    }
+  } else {
+    // In element mode, check if O is in the results
+    const oRes = elementsData.find(e => e.symbol === "O");
+    if (oRes) {
+      formula += `O${formatRatio(oRes.ratio)}`;
+    } else if (options?.normalizationMode === "stoichiometric-oxygen" && options.targetOxygen !== undefined) {
+      // If O wasn't selected but we normalized by stoichiometric O
+      const roundedO = Math.round(options.targetOxygen * 100) / 100;
+      formula += `O${roundedO === 1 ? "" : roundedO}`;
     }
   }
 
