@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { PeriodicTable } from "@/components/PeriodicTable";
+import { FormulaDisplay } from "@/components/FormulaDisplay";
 import { periodicTableData } from "@/lib/periodicTableData";
 import { 
   calculateElementMode, 
@@ -195,10 +196,8 @@ export default function Home() {
               <section className="bg-white border border-gray-200 rounded-sm p-6 shadow-sm space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div>
                   <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Empirical Formula</h2>
-                  <div className="bg-gray-50 p-4 rounded-sm border border-gray-100">
-                    <code className="text-xl font-mono font-bold text-black break-all">
-                      {formula || "N/A"}
-                    </code>
+                  <div className="bg-gray-50 p-6 rounded-sm border border-gray-100 flex items-center justify-center min-h-[80px]">
+                    <FormulaDisplay formula={formula} />
                   </div>
                 </div>
 
