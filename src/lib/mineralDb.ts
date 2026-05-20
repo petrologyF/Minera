@@ -25,6 +25,7 @@ export const mineralDb: MineralData[] = [
   { category: "硫化鉱物", nameJA: "磁硫鉄鉱", nameEN: "pyrrhotite", formula: "Fe1-xS" },
   { category: "硫化鉱物", nameJA: "黄鉄鉱", nameEN: "pyrite", formula: "FeS2" },
   { category: "硫化鉱物", nameJA: "白鉄鉱", nameEN: "marcasite", formula: "FeS2" },
+  { category: "硫化鉱物", nameJA: "硫砒鉄鉱", nameEN: "arsenopyrite", formula: "FeAsS" },
   { category: "硫化鉱物", nameJA: "輝安鉱", nameEN: "stibnite", formula: "Sb2S3" },
   { category: "硫化鉱物", nameJA: "輝水鉛鉱", nameEN: "molybdenite", formula: "MoS2" },
   { category: "酸化鉱物", nameJA: "赤銅鉱", nameEN: "cuprite", formula: "Cu2O" },
