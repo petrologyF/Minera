@@ -2,7 +2,8 @@
 
 import React, { memo } from "react";
 import { Toggle } from "@/components/ui/toggle";
-import { periodicTableData, ElementData } from "@/lib/periodicTableData";
+import { periodicTableData } from "@/lib/periodicTableData";
+import { ElementData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface PeriodicTableProps {

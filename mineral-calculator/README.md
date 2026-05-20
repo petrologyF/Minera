@@ -1,72 +1,73 @@
-# Mineral Naming & Formula Calculator
+# 鉱物命名・化学組成計算ツール (Mineral Naming & Formula Calculator)
 
-A Streamlit-based web application for deriving chemical formulas and identifying minerals from elemental or oxide weight percent (wt%) data, commonly obtained from Electron Probe Micro-Analyzer (EPMA) analysis.
+このプロジェクトは、EPMA（電子線マイクロアナライザ）などで得られた元素または酸化物の重量パーセント（wt%）データから、鉱物の化学組成式を導出し、鉱物名を特定するための統合ツール群です。
 
-## Features
+現在は **mineral-web** がメインの統合アプリケーションとして機能しており、従来の **mineral-calculator** のすべての計算ロジックとデータベースが移植されています。
 
-- **Dual Analysis Modes**: 
-    - **Oxide Mode**: Normalizes cation ratios based on a user-defined oxygen count ($n$). Essential for petrological stoichiometry.
-    - **Element Mode**: Simple atomic proportion calculations for elemental analysis.
-- **Dynamic Input**: Interactive data editor for easy entry of wt% values.
-- **Real-time Validation**: Automatic summation of wt% and warnings if the total deviates significantly from 100%.
-- **Chemical Formula Derivation**: Generates empirical chemical formulas from calculated atomic ratios.
-- **Mineral Identification**: Matches the derived stoichiometry against a customizable database (`mineral_db.csv`) using a least-squares difference approach.
-- **Detailed Calculation Logs**: View every step of the calculation process (Molecular Weight, Molecular Proportion, Cation/Oxygen Proportion, etc.) in a tabular format.
+---
 
-## Tech Stack
+## 1. Mineral Web (Next.js) - メイン・アプリケーション
 
-- **Python 3.10+**
-- **Streamlit**: Web UI and interactivity.
-- **Pandas**: Data processing and matrix calculations.
-- **Pytest**: Backend logic verification.
+最新のWeb技術を使用した、高度でインタラクティブな分析ダッシュボードです。
 
-## Installation
+### 主な機能
 
-1.  **Clone the repository**:
-    ```bash
-    git clone <repository-url>
-    cd mineral-calculator
-    ```
+- **統合分析ダッシュボード**: 
+    - インタラクティブな周期表による直感的な成分選択。
+    - **元素モード**と**酸化物モード**を動的に切り替え可能。
+    - リアルタイムでの合計wt%バリデーション。
+- **高度な計算エンジン**:
+    - **組成式の自動生成**: 標準的な陽イオン順序（Aサイト→Mサイト→Tサイト）に基づいた実験式の導出。
+    - **鉱物特定機能**: 120種類以上の鉱物データベースと照合し、最小二乗法で最も近い鉱物を特定。
+    - **詳細な計算過程**: 分子量、原子比、陽イオン/酸素プロポーションなどを一覧表示。
+- **モダンなUI/UX**:
+    - Notion風のクリーンなデザイン。
+    - 高速な動作とレスポンシブ対応。
 
-2.  **Install dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+### 技術スタック
 
-## Usage
+- **Next.js (React)** / **TypeScript**
+- **Tailwind CSS** / **shadcn/ui**
 
-1.  **Run the application**:
-    ```bash
-    streamlit run app.py
-    ```
+### インストールと実行
 
-2.  **Perform Analysis**:
-    - **Select Mode**: Choose "Oxide" or "Element" in the sidebar.
-    - **Set Oxygen Count**: For Oxide mode, specify the target oxygen count (e.g., 4 for Olivine, 8 for Feldspar).
-    - **Select Components**: Add or remove oxides/elements from the multiselect box.
-    - **Enter Data**: Fill in the `wt%` column in the data editor.
-    - **Calculate**: Click the "Calculate" button to see the results.
-
-## Project Structure
-
-```text
-mineral-calculator/
-├── app.py                # Main Streamlit UI
-├── requirements.txt       # Python dependencies
-├── data/
-│   ├── atomic_weights.csv # Standard atomic weight data
-│   └── mineral_db.csv     # Mineral identification database
-├── utils/
-│   └── calculations.py    # Core mathematical logic
-└── tests/
-    └── test_calculations.py # Unit tests
+```bash
+cd mineral-web
+npm install
+npm run dev
 ```
 
-## Data Customization
+---
 
-- **`data/atomic_weights.csv`**: You can update this file if you need higher precision or want to add rare elements.
-- **`data/mineral_db.csv`**: Add your own mineral standards to improve identification accuracy for specific geological settings.
+## 2. Mineral Calculator (Streamlit) - プロトタイプ
 
-## License
+初期開発に使用された、Pythonベースのアプリケーションです。現在はリファレンスとして提供されています。
 
-This project is provided for educational and research purposes in the field of Earth Sciences.
+### インストールと実行
+
+```bash
+cd mineral-calculator
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+---
+
+## プロジェクト構造
+
+```text
+.
+├── mineral-web/           # メイン・統合アプリケーション (Next.js)
+│   ├── src/
+│   │   ├── components/    # 周期表などのUIコンポーネント
+│   │   ├── lib/
+│   │   │   ├── calculations.ts  # 計算エンジン (Stoichiometry logic)
+│   │   │   ├── mineralDb.ts     # 鉱物データベース (120+ minerals)
+│   │   │   └── periodicTableData.ts # 元素・原子量データ
+│   │   └── app/           # ダッシュボードUI
+└── mineral-calculator/    # Pythonプロトタイプ (Reference)
+```
+
+## ライセンス
+
+このプロジェクトは、地球科学分野の教育および研究目的で提供されています。
