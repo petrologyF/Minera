@@ -166,18 +166,20 @@ export default function Home() {
               <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">3. Settings</h2>
               
               <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Oxygen Count</label>
-                  <input
-                    type="number"
-                    value={targetOxygen}
-                    onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                  <p className="mt-2 text-[10px] text-gray-400 leading-relaxed">
-                    Used in Oxide mode to calculate cation ratios (e.g., 4 for Olivine, 24 for Garnet).
-                  </p>
-                </div>
+                {mode === "oxide" && (
+                  <div className="animate-in fade-in slide-in-from-top-1 duration-300">
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Oxygen Count</label>
+                    <input
+                      type="number"
+                      value={targetOxygen}
+                      onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                    />
+                    <p className="mt-2 text-[10px] text-gray-400 leading-relaxed">
+                      Used in Oxide mode to calculate cation ratios (e.g., 4 for Olivine, 24 for Garnet).
+                    </p>
+                  </div>
+                )}
                 
                 <button
                   onClick={handleCalculate}
