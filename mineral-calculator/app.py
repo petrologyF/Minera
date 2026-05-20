@@ -200,4 +200,23 @@ if st.button("Calculate"):
         st.dataframe(results_df, use_container_width=True)
         
         # Formula Derivation
-        formula = generate_empirical_formula(results_df, target_oxyge
+        formula = generate_empirical_formula(results_df, target_oxygen)
+        st.subheader("3. Derived Empirical Formula")
+        st.code(formula)
+        
+        # Mineral Identification
+        st.subheader("4. Mineral Identification")
+        candidates = identify_mineral(results_df, mineral_db)
+        
+        best_match = candidates[0]
+        st.success(f"Best Match: **{best_match[0]}** (Difference Score: {best_match[1]:.4f})")
+        
+        with st.expander("Show other candidates"):
+            cand_df = pd.DataFrame(candidates, columns=["Mineral", "Difference Score"])
+            st.table(cand_df.head(5))
+            
+    except Exception as e:
+        st.error(f"Error during calculation: {e}")
+
+st.divider()
+st.caption("Mineral Calculator App - Built with Streamlit & Pandas")
