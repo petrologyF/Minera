@@ -1,69 +1,104 @@
-# Minera
+# Minera 💎
 
-このプロジェクトは、EPMA（電子線マイクロアナライザ）などで得られた元素または酸化物の重量パーセント（wt%）データから、鉱物の化学組成式を導出し、鉱物名を特定するための統合ツールです。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
 
-Next.jsを使用した高度でインタラクティブな分析ダッシュボードを提供します。
+**Minera** は、地球科学および鉱物学の研究・教育を支援するために開発された、Webベースの鉱物化学組成計算ツールです。EPMA（電子線マイクロアナライザ）などで得られた分析データから、即座に化学組成式を導出し、鉱物種を特定します。
 
----
-
-## 主な機能
-
-- **統合分析ダッシュボード**: 
-    - インタラクティブな周期表による直感的な成分選択。
-    - **元素モード**と**酸化物モード**を動的に切り替え可能。
-    - リアルタイムでの合計wt%バリデーション。
-- **高度な計算エンジン**:
-    - **組成式の自動生成**: 標準的な陽イオン順序（Aサイト→Mサイト→Tサイト）に基づいた実験式の導出。
-    - **鉱物特定機能**: 120種類以上の鉱物データベースと照合し、最小二乗法で最も近い鉱物を特定。
-    - **詳細な計算過程**: 分子量、原子比、陽イオン/酸素プロポーションなどを一覧表示。
-- **モダンなUI/UX**:
-    - Notion風のクリーンなデザイン。
-    - 高速な動作とレスポンシブ対応。
+[デモを見る（もし公開URLがあればここに）](#)
 
 ---
 
-## 技術スタック
+## 🌟 主な機能
 
-- **Framework**: Next.js (React)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Components**: shadcn/ui
+- **インタラクティブな分析ダッシュボード**:
+  - **動的成分選択**: 周期表を用いた直感的な操作で、分析対象の元素や酸化物を選択。
+  - **ハイブリッド・モード**: 「元素モード」と「酸化物モード」をリアルタイムに切り替え。
+  - **即時バリデーション**: 入力された wt% の合計値を自動計算し、分析の精度をチェック。
 
----
+- **高度なストイキオメトリ・エンジン**:
+  - **組成式の自動生成**: 標準的な陽イオンの占有順序（Aサイト→Mサイト→Tサイト）に基づいて実験式を算出。
+  - **スマート鉱物特定**: 120種類以上の鉱物データベースと照合し、最小二乗法を用いて最も可能性の高い鉱物名をリストアップ。
+  - **透明性の高い計算過程**: 分子量、原子比、陽イオン/酸素プロポーションなどの詳細な計算ステップをすべて表示。
 
-## インストールと実行
-
-1.  **依存関係のインストール**:
-    ```bash
-    npm install
-    ```
-
-2.  **開発サーバーの起動**:
-    ```bash
-    npm run dev
-    ```
-
-3.  **ブラウザで確認**:
-    [http://localhost:3000](http://localhost:3000) にアクセスしてください。
+- **洗練されたユーザー体験**:
+  - Notion風のクリーンでモダンなインターフェース。
+  - レスポンシブ設計により、PCからタブレットまで対応。
 
 ---
 
-## プロジェクト構造
+## 🚀 クイックスタート
+
+### 動作要件
+
+- Node.js 18.x 以上
+- npm または yarn
+
+### インストール
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/petrologyF/minera.git
+
+# ディレクトリに移動
+cd minera
+
+# 依存関係をインストール
+npm install
+```
+
+### 開発モードで実行
+
+```bash
+npm run dev
+```
+
+ブラウザで [http://localhost:3000](http://localhost:3000) を開くとアプリが表示されます。
+
+---
+
+## 🛠 技術スタック
+
+- **フロントエンド**: [Next.js](https://nextjs.org/) (App Router)
+- **言語**: [TypeScript](https://www.typescriptlang.org/)
+- **スタイリング**: [Tailwind CSS](https://tailwindcss.com/)
+- **コンポーネント**: [shadcn/ui](https://ui.shadcn.com/)
+- **計算ロジック**: 純粋な TypeScript 関数による高精度な化学計算
+
+---
+
+## 📂 プロジェクト構造
 
 ```text
 .
 ├── src/
-│   ├── components/    # 周期表などのUIコンポーネント
-│   ├── lib/
-│   │   ├── calculations.ts  # 計算エンジン (Stoichiometry logic)
-│   │   ├── mineralDb.ts     # 鉱物データベース (120+ minerals)
-│   │   ├── periodicTableData.ts # 元素・原子量データ
+│   ├── app/           # Next.js App Router (ページ構成)
+│   ├── components/    # 再利用可能なUIコンポーネント（周期表など）
+│   ├── lib/           # コア・ロジック
+│   │   ├── calculations.ts  # 組成計算・特定エンジン
+│   │   ├── mineralDb.ts     # 120種類以上の鉱物定義データ
+│   │   ├── periodicTableData.ts # 元素の物理特性データ
 │   │   └── types.ts         # 型定義
-│   └── app/           # ダッシュボードUIとルーティング
-├── public/            # 静的アセット
+│   └── styles/        # グローバルスタイル
+├── public/            # 静的アセット（ロゴ・画像など）
 └── package.json       # プロジェクト設定
 ```
 
-## ライセンス
+---
 
-このプロジェクトは MIT ライセンスの下で公開されています。詳細は [LICENSE](LICENSE) ファイルを参照してください。
+## 🤝 貢献について
+
+バグ報告や機能提案は、GitHub の Issues または Pull Requests で受け付けています。教育・研究目的での改善提案を歓迎します。
+
+---
+
+## 📄 ライセンス
+
+このプロジェクトは **MIT ライセンス** の下で公開されています。商用・非商用を問わず、自由にご利用いただけます。詳細は [LICENSE](LICENSE) ファイルを参照してください。
+
+---
+
+**Minera** - *Empowering Geoscience through Modern Web Technology.*
+Created by [Asahi Fukumoto](https://github.com/petrologyF)
+
