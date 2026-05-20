@@ -74,7 +74,7 @@ export default function Home() {
     <main className="min-h-screen bg-[#fafafa] p-4 md:p-12 font-sans text-gray-900">
       <div className="mx-auto max-w-6xl">
         <header className="mb-10">
-          <h1 className="text-4xl font-bold tracking-tight mb-3 text-black">Mineral Calculator</h1>
+          <h1 className="text-4xl font-bold tracking-tight mb-3 text-black">Minera</h1>
           <p className="text-gray-500 max-w-2xl text-lg">
             An integrated tool for mineral chemistry analysis. Select components, input wt%, and derive empirical formulas.
           </p>
