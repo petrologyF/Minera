@@ -202,11 +202,21 @@ export function generateEmpiricalFormula(
   elementsData.sort((a, b) => a.priority - b.priority);
 
   const formatRatio = (num: number) => {
-    if (Math.abs(num - Math.round(num)) < 0.001) {
+    // If it's effectively an integer (within a very tight tolerance), return as integer string
+    if (Math.abs(num - Math.round(num)) < 0.00001) {
       const intVal = Math.round(num);
       return intVal === 1 ? "" : intVal.toString();
     }
-    return (Math.round(num * 100) / 100).toString();
+    
+    // Use 4 significant figures for scientific precision
+    let formatted = num.toPrecision(4);
+    
+    // Remove trailing zeros after decimal point and the decimal point if not needed
+    if (formatted.includes(".")) {
+      formatted = formatted.replace(/\.?0+$/, "");
+    }
+    
+    return formatted === "1" ? "" : formatted;
   };
 
   let formula = elementsData
