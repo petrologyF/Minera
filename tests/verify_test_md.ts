@@ -2,9 +2,9 @@ import {
   calculateOxideMode, 
   calculateElementMode,
   generateEmpiricalFormula,
-} from './calculations';
-import { periodicTableData } from './periodicTableData';
-import { CalculationResult } from './types';
+} from '../src/lib/calculations';
+import { periodicTableData } from '../src/lib/periodicTableData';
+import { CalculationResult } from '../src/lib/types';
 
 const atomicWeights: Record<string, number> = {};
 periodicTableData.forEach(item => {
@@ -56,7 +56,13 @@ function runTest(
   return passed;
 }
 
-const tests = [
+const tests: {
+  id: string;
+  mode: 'oxide' | 'element';
+  input: { Item: string; "wt%": number }[];
+  settings: any;
+  expected: Record<string, number>;
+}[] = [
   {
     id: "Q1 (Spinel)",
     mode: 'oxide',
@@ -163,6 +169,73 @@ const tests = [
     ],
     settings: { normalization: { mode: 'total-anions', targetValue: 13 } },
     expected: { "Cu": 10.00, "Fe": 2.00, "As": 4.00, "S": 13.00 }
+  },
+  {
+    id: "Q11 (Chalcopyrite)",
+    mode: 'element',
+    input: [
+      { Item: "Cu", "wt%": 34.30 },
+      { Item: "Fe", "wt%": 30.59 },
+      { Item: "S", "wt%": 34.82 }
+    ],
+    settings: { normalization: { mode: 'total-anions', targetValue: 2 } },
+    expected: { "Cu": 0.9942, "Fe": 1.009, "S": 2 }
+  },
+  {
+    id: "Q12 (Troilite or Pyrrhotite)",
+    mode: 'element',
+    input: [
+      { Item: "Fe", "wt%": 63.53 },
+      { Item: "Mn", "wt%": 0.00 },
+      { Item: "Cd", "wt%": 0.00 },
+      { Item: "Zn", "wt%": 0.00 },
+      { Item: "S", "wt%": 36.47 }
+    ],
+    settings: { normalization: { mode: 'total-anions', targetValue: 1 } },
+    expected: { "Fe": 1.0002, "S": 1 }
+  },
+  {
+    id: "Q13 (Arsenopyrite)",
+    mode: 'element',
+    input: [
+      { Item: "Fe", "wt%": 34.30 },
+      { Item: "As", "wt%": 46.01 },
+      { Item: "S", "wt%": 19.69 }
+    ],
+    settings: { normalization: { mode: 'total-anions', targetValue: 1 } },
+    expected: { "Fe": 1.000, "As": 1.000, "S": 1 }
+  },
+  {
+    id: "Q14 (Magnetite)",
+    mode: 'oxide',
+    input: [
+      { Item: "SiO2", "wt%": 0.27 },
+      { Item: "Al2O3", "wt%": 0.21 },
+      { Item: "Fe2O3", "wt%": 68.85 },
+      { Item: "FeO", "wt%": 30.78 }
+    ],
+    settings: { targetOxygen: 4 },
+    expected: { "Fe²⁺": 0.9841, "Fe³⁺": 1.986, "Al": 0.009454, "Si": 0.01031 }
+  },
+  {
+    id: "Q15 (Spinel)",
+    mode: 'oxide',
+    input: [
+      { Item: "Al2O3", "wt%": 71.67 },
+      { Item: "MgO", "wt%": 28.33 }
+    ],
+    settings: { targetOxygen: 4 },
+    expected: { "Mg": 0.9999, "Al": 2.000 }
+  },
+  {
+    id: "Q16 (Hematite)",
+    mode: 'element',
+    input: [
+      { Item: "Fe", "wt%": 69.94 },
+      { Item: "O", "wt%": 30.06 }
+    ],
+    settings: { normalization: { mode: 'total-anions', targetValue: 3 } },
+    expected: { "Fe": 2.000 }
   }
 ];
 

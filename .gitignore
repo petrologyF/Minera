@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -11,15 +9,15 @@
 !.yarn/sdk
 !.yarn/versions
 
-# testing
-/coverage
-
 # next.js
 /.next/
 /out/
 
 # production
 /build
+
+# testing
+/coverage
 
 # misc
 .DS_Store
@@ -28,6 +26,7 @@
 .env*.local
 .env.apple
 .env.apple.local
+Thumbs.db
 
 # debug
 npm-debug.log*
@@ -51,5 +50,3 @@ next-env.d.ts
 .idea/
 *.swp
 *.swo
-.DS_Store
-Thumbs.db

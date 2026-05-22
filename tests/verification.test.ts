@@ -1,13 +1,12 @@
-import { test, describe } from 'node:test';
-import assert from 'node:assert/strict';
+import { test, describe, expect } from 'vitest';
 import { 
   calculateOxideMode, 
   generateEmpiricalFormula, 
   identifyMineral,
   preParseMineralDb
-} from './calculations';
-import { periodicTableData } from './periodicTableData';
-import { mineralDb as rawMineralDb } from './mineralDb';
+} from '../src/lib/calculations';
+import { periodicTableData } from '../src/lib/periodicTableData';
+import { mineralDb as rawMineralDb } from '../src/lib/mineralDb';
 
 const mineralDb = preParseMineralDb(rawMineralDb);
 const atomicWeights: Record<string, number> = {};
@@ -38,7 +37,7 @@ const problems: MineralProblem[] = [
     ],
     settings: { targetOxygen: 4 },
     expected: {
-      formulaMatch: /Mg1\.\d*Fe0\.\d*Si\d*\.?\d*O4/,
+      formulaMatch: /Mg1\.\d*Fe²⁺0\.\d*Si\d*\.?\d*O4/,
       mineralName: "かんらん石"
     }
   },
@@ -52,7 +51,7 @@ const problems: MineralProblem[] = [
     ],
     settings: { targetOxygen: 12 },
     expected: {
-      formulaMatch: /Mg2\.\d*Fe0\.\d*Al2\.\d*Si3\.\d*O12/,
+      formulaMatch: /Mg2\.\d*Fe²⁺0\.\d*Al2\.\d*Si3\.\d*O12/,
       mineralName: "パイロープ"
     }
   },
@@ -78,7 +77,7 @@ describe('Mineral Calculation Verification (Challenge Problems)', () => {
         prob.input, 
         atomicWeights, 
         prob.settings.targetOxygen, 
-        prob.settings.idealCations
+        prob.settings.idealCations ? { idealCations: prob.settings.idealCations, elementSymbol: "Fe" } : undefined
       );
       
       const formula = generateEmpiricalFormula(results, { 
@@ -94,16 +93,10 @@ describe('Mineral Calculation Verification (Challenge Problems)', () => {
       console.log(`Top Identification: ${topMatch.name} (Diff: ${topMatch.score.toFixed(6)})`);
 
       // Verify formula pattern
-      assert.ok(
-        prob.expected.formulaMatch.test(formula), 
-        `Formula '${formula}' did not match expected pattern ${prob.expected.formulaMatch}`
-      );
+      expect(formula).toMatch(prob.expected.formulaMatch);
 
       // Verify identification
-      assert.ok(
-        topMatch.name.includes(prob.expected.mineralName), 
-        `Top match '${topMatch.name}' did not contain expected mineral name '${prob.expected.mineralName}'`
-      );
+      expect(topMatch.name).toContain(prob.expected.mineralName);
     });
   });
 });

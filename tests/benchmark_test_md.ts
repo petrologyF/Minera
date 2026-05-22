@@ -4,10 +4,10 @@ import {
   generateEmpiricalFormula, 
   identifyMineral,
   preParseMineralDb
-} from './calculations';
-import { periodicTableData } from './periodicTableData';
-import { mineralDb as rawMineralDb } from './mineralDb';
-import { CalculationResult } from './types';
+} from '../src/lib/calculations';
+import { periodicTableData } from '../src/lib/periodicTableData';
+import { mineralDb as rawMineralDb } from '../src/lib/mineralDb';
+import { CalculationResult } from '../src/lib/types';
 
 const mineralDb = preParseMineralDb(rawMineralDb);
 const atomicWeights: Record<string, number> = {};

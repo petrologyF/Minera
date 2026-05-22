@@ -77,11 +77,30 @@ export function calculateElementMode(input: { Item: string; "wt%": number }[], a
 export const ESTIMATABLE_ELEMENTS: Record<string, [number, number]> = { Fe: [2, 3], Mn: [2, 3], Ti: [3, 4], Cr: [2, 3] };
 
 export function calculateOxideMode(input: { Item: string; "wt%": number }[], atomicWeights: Record<string, number>, targetOxygen: number, estimation?: { idealCations: number; elementSymbol: string; }): OxideCalculationRow[] {
+  const formatV = (v: number) => v === 1 ? "" : (v === 2 ? "²⁺" : (v === 3 ? "³⁺" : (v === 4 ? "⁴⁺" : (v === 5 ? "⁵⁺" : ""))));
+  
   let results: OxideCalculationRow[] = input.map(row => {
     const mw = getMolecularWeight(row.Item, atomicWeights), molProp = mw > 0 ? row["wt%"] / mw : 0, counts = parseComplexFormula(row.Item);
     const oCount = counts["O"] || 0; delete counts["O"];
     const cationCount = Object.values(counts).reduce((a, b) => a + b, 0);
-    return { Item: row.Item, "wt%": row["wt%"], "Molecular Weight": mw, "Molecular Proportion": molProp, "Cation Proportion": molProp * cationCount, "Oxygen Proportion": molProp * oCount, "Atomic Ratio": 0 };
+    
+    // Identify cation symbol and valence for labeling
+    const cationSymbol = Object.keys(counts)[0] || row.Item;
+    let label = cationSymbol;
+    if (Object.keys(counts).length === 1) {
+      if (cationSymbol === "Fe") {
+        if (row.Item === "Fe2O3") label = "Fe³⁺";
+        else if (row.Item === "FeO") label = "Fe²⁺";
+      } else if (cationSymbol === "Mn") {
+        if (row.Item === "MnO2") label = "Mn⁴⁺";
+        else if (row.Item === "Mn2O3") label = "Mn³⁺";
+        else if (row.Item === "MnO") label = "Mn²⁺";
+      } else if (cationSymbol === "Ti" && row.Item === "Ti2O3") {
+        label = "Ti³⁺";
+      }
+    }
+
+    return { Item: label, "wt%": row["wt%"], "Molecular Weight": mw, "Molecular Proportion": molProp, "Cation Proportion": molProp * cationCount, "Oxygen Proportion": molProp * oCount, "Atomic Ratio": 0 };
   });
 
   if (estimation && estimation.idealCations > 0) {
@@ -113,7 +132,6 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
         const totalAtoms = results[targetIdx]["Atomic Ratio"];
         const cappedElevated = Math.min(atomsToElevate, totalAtoms);
         const originalRow = results[targetIdx];
-        const formatV = (v: number) => v === 1 ? "" : (v === 2 ? "²⁺" : (v === 3 ? "³⁺" : "⁴⁺"));
         const newResults = [...results];
         newResults.splice(targetIdx, 1, 
           { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vLow)} (est.)`, "Atomic Ratio": totalAtoms - cappedElevated },
