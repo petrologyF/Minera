@@ -4,9 +4,10 @@ import { cn } from "@/lib/utils";
 
 interface FormulaDisplayProps {
   formula: string;
+  isDark?: boolean;
 }
 
-export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ formula }) => {
+export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ formula, isDark }) => {
   const [copied, setCopied] = useState(false);
 
   if (!formula) return <span className="text-gray-400">N/A</span>;
@@ -37,8 +38,11 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ formula }) => {
   const parts = formula.split(/([A-Z][a-z]*|[(),·・])/g).filter(Boolean);
 
   return (
-    <div className="relative group flex items-center gap-4">
-      <span className="font-sans font-medium text-2xl tracking-tight text-black select-all">
+    <div className="relative group flex flex-col md:flex-row items-center gap-4 w-full">
+      <div className={cn(
+        "font-sans font-medium text-xl md:text-2xl tracking-tight select-all overflow-x-auto whitespace-nowrap pb-2 md:pb-0 scrollbar-hide flex-1 text-center md:text-left min-w-0",
+        isDark ? "text-white" : "text-black"
+      )}>
         {parts.map((part, i) => {
           const isElementOrDelimiter = part.match(/^([A-Z][a-z]*|[(),·・])$/);
 
@@ -53,7 +57,7 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ formula }) => {
             const isSubscript = prevPart && (prevPart.match(/^[A-Z][a-z]*$/) || prevPart === ")");
 
             if (isSubscript) {
-              const subTokens = stplitSubTokens(part);
+              const subTokens = splitSubTokens(part);
               return (
                 <sub 
                   key={i} 
@@ -81,12 +85,12 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ formula }) => {
             }
           }
         })}
-      </span>
+      </div>
 
       <button
         onClick={copyAsLatex}
         className={cn(
-          "flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-sm transition-all",
+          "shrink-0 flex items-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-sm transition-all",
           "bg-white border border-gray-200 text-gray-400 hover:border-black hover:text-black shadow-sm",
           copied && "border-green-500 text-green-600 bg-green-50 hover:border-green-500 hover:text-green-600"
         )}
@@ -108,7 +112,7 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ formula }) => {
   );
 };
 
-function stplitSubTokens(part: string) {
+function splitSubTokens(part: string) {
   return part.split(/([xyz n]|\d+(?:\.\d+)?|[-+])/g).filter(Boolean);
 }
 

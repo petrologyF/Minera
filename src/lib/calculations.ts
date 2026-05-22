@@ -178,6 +178,61 @@ export function generateEmpiricalFormula(results: CalculationResult[], options?:
   return formula;
 }
 
+export function generateStructuralFormula(results: CalculationResult[], mineral: MineralData, targetOxygen?: number): string {
+  if (!mineral.sites) return generateEmpiricalFormula(results);
+
+  const formatR = (num: number) => {
+    if (Math.abs(num - Math.round(num)) < 0.00001) return Math.round(num) === 1 ? "" : Math.round(num).toString();
+    let f = num.toPrecision(4); if (f.includes(".")) f = f.replace(/\.?0+$/, ""); return f === "1" ? "" : f;
+  };
+
+  const assignedItems = new Set<string>();
+  const siteFormulas: string[] = [];
+
+  mineral.sites.forEach(site => {
+    const siteElements: { symbol: string; ratio: number }[] = [];
+    let siteTotal = 0;
+
+    site.elements.forEach(el => {
+      // Find match by comparing base symbol or explicit ion label
+      const match = results.find(r => {
+        const itemBase = r.Item.replace(/[²³⁴⁵]⁺$/, "");
+        return r.Item === el || itemBase === el;
+      });
+      
+      if (match) {
+        siteElements.push({ symbol: el, ratio: match["Atomic Ratio"] });
+        siteTotal += match["Atomic Ratio"];
+        assignedItems.add(match.Item);
+      }
+    });
+
+    if (siteElements.length > 0) {
+      const inner = siteElements.map(e => `${e.symbol}${formatR(e.ratio)}`).join("");
+      siteFormulas.push(`(${inner})${formatR(siteTotal)}`);
+    }
+  });
+
+  // Handle remaining items (anions usually)
+  const remaining = results.filter(r => !assignedItems.has(r.Item) && r["Atomic Ratio"] > 0.0001);
+  const anions: { priority: number; symbol: string; ratio: number }[] = [];
+  remaining.forEach(res => {
+    const symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
+    const priority = CATION_ORDER[symbol] || 999;
+    anions.push({ priority, symbol, ratio: res["Atomic Ratio"] });
+  });
+
+  // Add Oxygen if oxide mode
+  if (targetOxygen !== undefined) {
+    anions.push({ priority: CATION_ORDER["O"], symbol: "O", ratio: targetOxygen });
+  }
+
+  anions.sort((a, b) => a.priority - b.priority);
+  const anionStr = anions.map(a => `${a.symbol}${formatR(a.ratio)}`).join("");
+
+  return siteFormulas.join("") + anionStr;
+}
+
 export function identifyMineral(results: CalculationResult[], mineralDb: MineralData[]): IdentificationCandidate[] {
   const EXCLUDED = ["O", "H"]; const calcRatios: Record<string, number> = {};
   results.forEach(res => {
@@ -189,7 +244,8 @@ export function identifyMineral(results: CalculationResult[], mineralDb: Mineral
     const counts = mineral.parsedFormula || parseComplexFormula(mineral.formula);
     for (const [k, v] of Object.entries(counts)) if (!EXCLUDED.includes(k)) dbProps[k] = v;
     let score = 0; new Set([...Object.keys(calcRatios), ...Object.keys(dbProps)]).forEach(el => { score += Math.pow((calcRatios[el] || 0) - (dbProps[el] || 0), 2); });
-    return { name: `${mineral.nameJA} (${mineral.nameEN})`, nameEN: mineral.nameEN, category: mineral.category, formula: mineral.formula, score };
+    // Keep mineral name as "English (Japanese)"
+    return { name: `${mineral.nameEN.charAt(0).toUpperCase() + mineral.nameEN.slice(1)} (${mineral.nameJA})`, nameEN: mineral.nameEN, category: mineral.category, formula: mineral.formula, score };
   });
   return scores.sort((a, b) => a.score - b.score);
 }

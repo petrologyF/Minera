@@ -50,6 +50,7 @@ const ElementCell = memo(({
   const [showOptions, setShowOptions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Close selection popover when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -119,6 +120,7 @@ const ElementCell = memo(({
         )}
       </Toggle>
 
+      {/* Multiple Oxide Selection Popover */}
       {showOptions && (
         <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-1 bg-white border border-gray-200 shadow-xl rounded-md p-1.5 flex flex-col gap-1 min-w-[80px]">
           <div className="text-[10px] font-bold text-gray-400 mb-1 px-1 border-b border-gray-100 pb-1 text-center">

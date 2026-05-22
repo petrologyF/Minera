@@ -43,12 +43,19 @@ export interface ElementCalculationRow extends BaseCalculationRow {
 
 export type CalculationResult = OxideCalculationRow | ElementCalculationRow;
 
+export interface MineralSite {
+  name: string;
+  capacity: number;
+  elements: string[]; // e.g. ["Fe²⁺", "Mg", "Mn"]
+}
+
 export interface MineralData {
   category: string;
   nameJA: string;
   nameEN: string;
   formula: string;
-  parsedFormula?: Record<string, number>; // For performance optimization
+  parsedFormula?: Record<string, number>;
+  sites?: MineralSite[];
 }
 
 export interface IdentificationCandidate {
