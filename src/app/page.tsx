@@ -8,10 +8,16 @@ import {
   calculateElementMode, 
   calculateOxideMode, 
   generateEmpiricalFormula, 
-  identifyMineral 
+  identifyMineral,
+  preParseMineralDb
 } from "@/lib/calculations";
-import { mineralDb } from "@/lib/mineralDb";
-import { CalculationResult } from "@/lib/types";
+import { mineralDb as rawMineralDb } from "@/lib/mineralDb";
+import { CalculationResult, IdentificationCandidate, OxideCalculationRow, ElementCalculationRow } from "@/lib/types";
+import { Download, Info, History as HistoryIcon, ArrowUpDown } from "lucide-react";
+
+const mineralDb = preParseMineralDb(rawMineralDb);
+
+type SortConfig = { key: keyof CalculationResult; direction: "asc" | "desc" } | null;
 
 export default function Home() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -22,9 +28,9 @@ export default function Home() {
   const [idealCations, setIdealCations] = useState<number>(3.0);
   const [results, setResults] = useState<CalculationResult[] | null>(null);
   const [formula, setFormula] = useState<string>("");
-  const [candidates, setCandidates] = useState<{ name: string; score: number }[]>([]);
+  const [candidates, setCandidates] = useState<IdentificationCandidate[]>([]);
+  const [sortConfig, setSortConfig] = useState<SortConfig>(null);
 
-  // New normalization states
   const [elNormMode, setElNormMode] = useState<"none" | "stoichiometric-oxygen" | "element-ratio" | "total-anions">("none");
   const [elTargetElement, setElTargetElement] = useState<string>("");
   const [elTargetValue, setElTargetValue] = useState<number>(1.0);
@@ -42,8 +48,9 @@ export default function Home() {
       const isSelected = prev.includes(item);
       if (isSelected) {
         const next = prev.filter((i) => i !== item);
-        const { [item]: _, ...rest } = wtPercents;
-        setWtPercents(rest);
+        const nextWtPercents = { ...wtPercents };
+        delete nextWtPercents[item];
+        setWtPercents(nextWtPercents);
         if (elTargetElement === item) setElTargetElement("");
         return next;
       } else {
@@ -71,13 +78,7 @@ export default function Home() {
 
     let calcResults: CalculationResult[];
     if (mode === "oxide") {
-      calcResults = calculateOxideMode(
-        input, 
-        atomicWeightsMap, 
-        targetOxygen, 
-        isFeEstimationEnabled ? idealCations : undefined
-      );
-      setResults(calcResults);
+      calcResults = calculateOxideMode(input, atomicWeightsMap, targetOxygen, isFeEstimationEnabled ? idealCations : undefined);
       setFormula(generateEmpiricalFormula(calcResults, { mode: "oxide", targetOxygen }));
     } else {
       const norm = elNormMode === "none" ? undefined : {
@@ -86,33 +87,91 @@ export default function Home() {
         targetElement: elTargetElement
       };
       calcResults = calculateElementMode(input, atomicWeightsMap, norm);
-      setResults(calcResults);
       setFormula(generateEmpiricalFormula(calcResults, { 
         mode: "element", 
         targetOxygen: (elNormMode === "stoichiometric-oxygen" || elNormMode === "total-anions") ? targetOxygen : undefined,
-        normalizationMode: elNormMode === "none" ? undefined : (elNormMode === "total-anions" ? "element-ratio" : elNormMode) // element-ratio is closest for generic normalization in formula gen
+        normalizationMode: elNormMode === "none" ? undefined : (elNormMode === "total-anions" ? "element-ratio" : elNormMode)
       }));
     }
 
+    setResults(calcResults);
     setCandidates(identifyMineral(calcResults, mineralDb).slice(0, 5));
+  };
+
+  const sortedResults = useMemo(() => {
+    if (!results || !sortConfig) return results;
+    const sorted = [...results].sort((a, b) => {
+      const aVal = (a[sortConfig.key] as number) ?? 0;
+      const bVal = (b[sortConfig.key] as number) ?? 0;
+      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [results, sortConfig]);
+
+  const handleSort = (key: string) => {
+    setSortConfig(prev => {
+      const typedKey = key as keyof CalculationResult;
+      if (prev?.key === typedKey) {
+        if (prev.direction === "asc") return { key: typedKey, direction: "desc" };
+        return null;
+      }
+      return { key: typedKey, direction: "asc" };
+    });
+  };
+
+  const exportToCSV = () => {
+    if (!results) return;
+    const headers = mode === "oxide" 
+      ? ["Item", "wt%", "Mol. Weight", "Mol. Prop", "Cation Prop", "Oxygen Prop", "Atomic Ratio"]
+      : ["Item", "wt%", "At. Weight", "At. Prop", "Atomic Ratio"];
+    
+    const rows = results.map(res => {
+      if (mode === "oxide") {
+        const r = res as OxideCalculationRow;
+        return [r.Item, r["wt%"], r["Molecular Weight"], r["Molecular Proportion"], r["Cation Proportion"], r["Oxygen Proportion"], r["Atomic Ratio"]];
+      } else {
+        const r = res as ElementCalculationRow;
+        return [r.Item, r["wt%"], r["Atomic Weight"], r["Atomic Proportion"], r["Atomic Ratio"]];
+      }
+    });
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `minera_results_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
     <main className="min-h-screen bg-[#fafafa] p-4 md:p-12 font-sans text-gray-900">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-10">
-          <h1 className="text-4xl font-bold tracking-tight mb-3 text-black">Minera</h1>
-          <p className="text-gray-500 max-w-2xl text-lg">
-            An integrated tool for mineral chemistry analysis. Select components, input wt%, and derive empirical formulas.
-          </p>
+        <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight mb-3 text-black">Minera</h1>
+            <p className="text-gray-500 max-w-2xl text-lg">
+              地球科学・鉱物学のための化学組成計算ツール
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-sm hover:bg-gray-50 transition-colors">
+              <HistoryIcon size={16} />
+              履歴
+            </button>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Selection & Input */}
           <div className="lg:col-span-2 space-y-8">
             <section className="bg-white border border-gray-200 rounded-sm p-6 shadow-sm">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">1. Select Components</h2>
+                <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">1. 成分選択</h2>
                 <div className="flex bg-gray-100 p-1 rounded-sm">
                   <button
                     onClick={() => setMode("element")}
@@ -120,7 +179,7 @@ export default function Home() {
                       mode === "element" ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
                     }`}
                   >
-                    Elements
+                    元素モード
                   </button>
                   <button
                     onClick={() => setMode("oxide")}
@@ -128,28 +187,24 @@ export default function Home() {
                       mode === "oxide" ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
                     }`}
                   >
-                    Oxides
+                    酸化物モード
                   </button>
                 </div>
               </div>
               
-              <PeriodicTable
-                selectedItems={selectedItems}
-                onToggleItem={toggleItem}
-                mode={mode}
-              />
+              <PeriodicTable selectedItems={selectedItems} onToggleItem={toggleItem} mode={mode} />
             </section>
 
             <section className="bg-white border border-gray-200 rounded-sm p-6 shadow-sm">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">2. Input Data (wt%)</h2>
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">2. 分析データ入力 (wt%)</h2>
               
               {selectedItems.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-gray-100">
-                        <th className="py-3 font-semibold text-sm text-gray-600">Component</th>
-                        <th className="py-3 font-semibold text-sm text-gray-600">Weight Percent (wt%)</th>
+                        <th className="py-3 font-semibold text-sm text-gray-600">成分</th>
+                        <th className="py-3 font-semibold text-sm text-gray-600">重量パーセント (wt%)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -181,36 +236,30 @@ export default function Home() {
                 </div>
               ) : (
                 <p className="text-gray-400 text-sm italic py-10 text-center border-2 border-dashed border-gray-50 rounded-sm">
-                  Select elements or oxides from the periodic table above to start.
+                  上の周期表から成分を選択してください。
                 </p>
               )}
             </section>
           </div>
 
-          {/* Right Column: Settings & Results */}
           <div className="space-y-8">
             <section className="bg-white border border-gray-200 rounded-sm p-6 shadow-sm">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">3. Settings</h2>
-              
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">3. 計算設定</h2>
               <div className="space-y-4">
                 {mode === "oxide" ? (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
+                  <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Oxygen Count</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">正規化酸素数</label>
                       <input
                         type="number"
                         value={targetOxygen}
                         onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
                         className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
                       />
-                      <p className="mt-2 text-[10px] text-gray-400 leading-relaxed">
-                        Used in Oxide mode to calculate cation ratios (e.g., 4 for Olivine, 24 for Garnet).
-                      </p>
                     </div>
-
                     <div className="pt-4 border-t border-gray-100">
                       <div className="flex items-center justify-between mb-4">
-                        <label className="text-xs font-bold text-gray-500 uppercase">Fe²⁺/Fe³⁺ Estimation</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase">鉄原子価（Fe²⁺/Fe³⁺）推定</label>
                         <input
                           type="checkbox"
                           checked={isFeEstimationEnabled}
@@ -218,90 +267,60 @@ export default function Home() {
                           className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
                         />
                       </div>
-                      
                       {isFeEstimationEnabled && (
-                        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Ideal Cation Count</label>
-                            <input
-                              type="number"
-                              value={idealCations}
-                              onChange={(e) => setIdealCations(parseFloat(e.target.value) || 0)}
-                              className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
-                            />
-                            <p className="mt-2 text-[10px] text-gray-400 leading-relaxed">
-                              Ideal sum of cations for the mineral (e.g., 3 for Spinel, 8 for Garnet).
-                            </p>
-                          </div>
+                        <div className="space-y-2">
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase">理論的陽イオン合計</label>
+                          <input
+                            type="number"
+                            value={idealCations}
+                            onChange={(e) => setIdealCations(parseFloat(e.target.value) || 0)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                          />
                         </div>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
+                  <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Mode</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">正規化モード</label>
                       <select
                         value={elNormMode}
-                        onChange={(e) => setElNormMode(e.target.value as any)}
+                        onChange={(e) => setElNormMode(e.target.value as "none" | "stoichiometric-oxygen" | "element-ratio" | "total-anions")}
                         className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
                       >
-                        <option value="none">None (Raw Proportions)</option>
-                        <option value="element-ratio">By Specific Element (e.g. S=1)</option>
-                        <option value="total-anions">By Total Anions (S+As+...)</option>
-                        <option value="stoichiometric-oxygen">By Stoichiometric Oxygen</option>
+                        <option value="none">なし（未正規化）</option>
+                        <option value="element-ratio">特定元素基準 (例: S=1)</option>
+                        <option value="total-anions">全アニオン合計基準</option>
+                        <option value="stoichiometric-oxygen">理論的酸素量基準</option>
                       </select>
                     </div>
-
                     {elNormMode === "element-ratio" && (
                       <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Target Element</label>
-                          <select
-                            value={elTargetElement}
-                            onChange={(e) => setElTargetElement(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-sm px-2 py-1.5 text-sm focus:outline-none"
-                          >
-                            <option value="">Select...</option>
-                            {selectedItems.map(item => (
-                              <option key={item} value={item}>{item}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Target Value</label>
-                          <input
-                            type="number"
-                            value={elTargetValue}
-                            onChange={(e) => setElTargetValue(parseFloat(e.target.value) || 0)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-sm px-2 py-1.5 text-sm focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {(elNormMode === "stoichiometric-oxygen" || elNormMode === "total-anions") && (
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
-                          {elNormMode === "stoichiometric-oxygen" ? "Normalization Oxygen Count" : "Normalization Anion Count"}
-                        </label>
+                        <select
+                          value={elTargetElement}
+                          onChange={(e) => setElTargetElement(e.target.value)}
+                          className="w-full bg-gray-50 border border-gray-200 rounded-sm px-2 py-1.5 text-sm focus:outline-none"
+                        >
+                          <option value="">対象元素...</option>
+                          {selectedItems.map(item => <option key={item} value={item}>{item}</option>)}
+                        </select>
                         <input
                           type="number"
-                          value={targetOxygen}
-                          onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
-                          className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                          value={elTargetValue}
+                          onChange={(e) => setElTargetValue(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-gray-50 border border-gray-200 rounded-sm px-2 py-1.5 text-sm focus:outline-none"
                         />
                       </div>
                     )}
                   </div>
                 )}
-                
                 <button
                   onClick={handleCalculate}
                   disabled={selectedItems.length === 0}
                   className="w-full bg-black text-white font-bold py-3 px-6 rounded-sm hover:bg-gray-800 disabled:bg-gray-200 disabled:cursor-not-allowed transition-all shadow-md active:scale-[0.98]"
                 >
-                  Run Calculation
+                  計算実行
                 </button>
               </div>
             </section>
@@ -309,21 +328,30 @@ export default function Home() {
             {results && (
               <section className="bg-white border border-gray-200 rounded-sm p-6 shadow-sm space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Empirical Formula</h2>
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">実験組成式 (Empirical Formula)</h2>
                   <div className="bg-gray-50 p-6 rounded-sm border border-gray-100 flex items-center justify-center min-h-[80px]">
                     <FormulaDisplay formula={formula} />
                   </div>
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Mineral Identification</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">鉱物同定候補</h2>
+                    <Info size={14} className="text-gray-300" />
+                  </div>
                   <div className="space-y-2">
                     {candidates.map((cand, idx) => (
-                      <div key={idx} className={`flex items-center justify-between p-3 rounded-sm border ${idx === 0 ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-100'}`}>
-                        <span className="text-sm font-medium">{cand.name}</span>
-                        <span className={`text-[10px] font-mono ${idx === 0 ? 'text-gray-400' : 'text-gray-300'}`}>
-                          Diff: {cand.score.toFixed(4)}
-                        </span>
+                      <div key={idx} className={`p-3 rounded-sm border transition-all ${idx === 0 ? 'bg-black text-white border-black shadow-lg scale-[1.02]' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-300'}`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-bold">{cand.name}</span>
+                          <span className={`text-[10px] font-mono ${idx === 0 ? 'text-gray-400' : 'text-gray-300'}`}>
+                            Diff: {cand.score.toFixed(4)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] opacity-70">
+                          <span>{cand.category}</span>
+                          <span className="font-serif italic">{cand.formula}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -335,44 +363,56 @@ export default function Home() {
 
         {results && (
           <section className="mt-8 bg-white border border-gray-200 rounded-sm p-6 shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">Detailed Calculation Table</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">詳細計算テーブル</h2>
+              <button onClick={exportToCSV} className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-gray-600 border border-gray-200 rounded-sm hover:bg-gray-50 transition-all">
+                <Download size={14} />
+                CSVエクスポート
+              </button>
+            </div>
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">Item</th>
-                  <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">wt%</th>
+                  <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase cursor-pointer hover:text-black" onClick={() => handleSort("Item")}>
+                    項目 <ArrowUpDown size={10} className="inline ml-1" />
+                  </th>
+                  <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase cursor-pointer hover:text-black" onClick={() => handleSort("wt%")}>
+                    wt% <ArrowUpDown size={10} className="inline ml-1" />
+                  </th>
                   {mode === "oxide" ? (
                     <>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">Mol. Weight</th>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">Mol. Prop</th>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">Cation Prop</th>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">Oxygen Prop</th>
+                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">分子量</th>
+                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">分子比</th>
+                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">陽イオン比</th>
+                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">酸素比</th>
                     </>
                   ) : (
                     <>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">At. Weight</th>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">At. Prop</th>
+                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">原子量</th>
+                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">原子比</th>
                     </>
                   )}
-                  <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">At. Ratio</th>
+                  <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase cursor-pointer hover:text-black" onClick={() => handleSort("Atomic Ratio")}>
+                    原子数比 <ArrowUpDown size={10} className="inline ml-1" />
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {results.map((res, i) => (
+                {sortedResults?.map((res, i) => (
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-4 text-sm font-bold">{res.Item}</td>
                     <td className="py-4 px-4 text-sm">{res["wt%"].toFixed(2)}</td>
                     {mode === "oxide" ? (
                       <>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{res["Molecular Weight"]?.toFixed(3)}</td>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{res["Molecular Proportion"]?.toFixed(4)}</td>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{res["Cation Proportion"]?.toFixed(4)}</td>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{res["Oxygen Proportion"]?.toFixed(4)}</td>
+                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as OxideCalculationRow)["Molecular Weight"]?.toFixed(3)}</td>
+                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as OxideCalculationRow)["Molecular Proportion"]?.toFixed(4)}</td>
+                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as OxideCalculationRow)["Cation Proportion"]?.toFixed(4)}</td>
+                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as OxideCalculationRow)["Oxygen Proportion"]?.toFixed(4)}</td>
                       </>
                     ) : (
                       <>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{res["Atomic Weight"]?.toFixed(3)}</td>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{res["Atomic Proportion"]?.toFixed(4)}</td>
+                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as ElementCalculationRow)["Atomic Weight"]?.toFixed(3)}</td>
+                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as ElementCalculationRow)["Atomic Proportion"]?.toFixed(4)}</td>
                       </>
                     )}
                     <td className="py-4 px-4 text-sm font-bold text-black">{res["Atomic Ratio"].toFixed(4)}</td>

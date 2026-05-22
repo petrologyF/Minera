@@ -1,17 +1,25 @@
-import { CalculationResult, ElementData, MineralData } from "./types";
+import { CalculationResult, MineralData, OxideCalculationRow, ElementCalculationRow, IdentificationCandidate } from "./types";
 
+/**
+ * Parses a complex mineral formula into element counts.
+ * Handles:
+ * - Nested parentheses: Mg3(Al,Fe)2(SiO4)3
+ * - Hydration dots: CaSO4·2H2O, FeO(OH)·nH2O
+ * - Variables/solid solutions: Fe1-xS, (Mg,Fe)2SiO4
+ */
 export function parseComplexFormula(formula: string): Record<string, number> {
-  const cleanFormula = formula.split(/[·・]/)[0].replace(/\s/g, "");
+  const parts = formula.replace(/\s/g, "").split(/[·・]/);
+  const totalRes: Record<string, number> = {};
 
   function parsePart(f: string): Record<string, number> {
     const res: Record<string, number> = {};
     let i = 0;
 
-    while (i < len(f)) {
+    while (i < f.length) {
       if (f[i] === "(") {
         let countOpen = 1;
         let j = i + 1;
-        while (j < len(f) && countOpen > 0) {
+        while (j < f.length && countOpen > 0) {
           if (f[j] === "(") countOpen++;
           else if (f[j] === ")") countOpen--;
           j++;
@@ -30,7 +38,8 @@ export function parseComplexFormula(formula: string): Record<string, number> {
         for (const [k, v] of Object.entries(inner)) {
           res[k] = (res[k] || 0) + v * mult;
         }
-      } else if (f[i] === "," || f[i] === "-" || f[i] === "x") {
+      } else if (f[i] === "," || f[i] === "-" || /[x-z]/.test(f[i])) {
+        // Skip variables (x, y, z) and commas in solid solutions
         i++;
         continue;
       } else {
@@ -48,9 +57,30 @@ export function parseComplexFormula(formula: string): Record<string, number> {
     return res;
   }
 
-  function len(s: string) { return s.length; }
+  parts.forEach((part, index) => {
+    let mult = 1.0;
+    let formulaPart = part;
+    
+    if (index > 0) {
+      // Check for leading coefficient in hydration parts like 2H2O or nH2O
+      const match = part.match(/^(\d+(\.\d+)?|n)/);
+      if (match) {
+        if (match[1] === 'n') {
+          mult = 1.0; // Treat 'n' as 1 for nominal MW calculation
+        } else {
+          mult = parseFloat(match[1]);
+        }
+        formulaPart = part.substring(match[0].length);
+      }
+    }
+    
+    const partRes = parsePart(formulaPart);
+    for (const [k, v] of Object.entries(partRes)) {
+      totalRes[k] = (totalRes[k] || 0) + v * mult;
+    }
+  });
 
-  return parsePart(cleanFormula);
+  return totalRes;
 }
 
 export function getMolecularWeight(formula: string, atomicWeights: Record<string, number>): number {
@@ -58,7 +88,12 @@ export function getMolecularWeight(formula: string, atomicWeights: Record<string
   let mw = 0.0;
   for (const [symbol, count] of Object.entries(counts)) {
     if (!(symbol in atomicWeights)) {
-      if (["OH", "F", "Cl"].includes(symbol)) continue;
+      // Common polyatomic groups or elements not in main table
+      if (["OH", "F", "Cl", "S", "C", "P", "B", "W", "V", "As", "Sb"].includes(symbol)) {
+        // If it's a known group like OH, it should have been parsed into O and H
+        // If it's still here, we might need its weight if not in atomicWeights
+        continue; 
+      }
       throw new Error(`Unknown element in formula '${formula}': ${symbol}`);
     }
     mw += atomicWeights[symbol] * count;
@@ -79,10 +114,10 @@ export function calculateElementMode(
     targetValue: number;
     targetElement?: string;
   }
-): CalculationResult[] {
-  const results: CalculationResult[] = input.map(row => {
+): ElementCalculationRow[] {
+  const results: ElementCalculationRow[] = input.map(row => {
     const weight = atomicWeights[row.Item] || 0;
-    const prop = row["wt%"] / weight;
+    const prop = weight > 0 ? row["wt%"] / weight : 0;
     return {
       Item: row.Item,
       "wt%": row["wt%"],
@@ -139,10 +174,10 @@ export function calculateOxideMode(
   atomicWeights: Record<string, number>,
   targetOxygen: number,
   idealCations?: number
-): CalculationResult[] {
-  let results: CalculationResult[] = input.map(row => {
+): OxideCalculationRow[] {
+  let results: OxideCalculationRow[] = input.map(row => {
     const mw = getMolecularWeight(row.Item, atomicWeights);
-    const molProp = row["wt%"] / mw;
+    const molProp = mw > 0 ? row["wt%"] / mw : 0;
     
     const counts = parseComplexFormula(row.Item);
     const oCount = counts["O"] || 0;
@@ -170,13 +205,8 @@ export function calculateOxideMode(
   if (idealCations && idealCations > 0) {
     const currentCationSum = results.reduce((sum, res) => sum + res["Atomic Ratio"], 0);
     
-    // Droop (1987) method: Fe3+ = 2 * N * (1 - S/T)
-    // where N = targetOxygen, S = idealCations, T = currentCationSum (calculated assuming all Fe is Fe2+)
     if (currentCationSum > idealCations) {
       const fe3Atoms = 2 * targetOxygen * (1 - idealCations / currentCationSum);
-      
-      // Find the row containing Iron to split it
-      // We look for "Fe" in the formula
       const feIndex = results.findIndex(res => res.Item.includes("Fe"));
       
       if (feIndex !== -1) {
@@ -186,11 +216,6 @@ export function calculateOxideMode(
 
         const feRow = results[feIndex];
         const newResults = [...results];
-        
-        // Replace original Fe row with Fe2+ and Fe3+
-        // Note: We keep the original wt% and other fields in the first row or split them?
-        // Usually, in mineralogy tables, we show FeO and Fe2O3.
-        // For simplicity in the result table, we'll split the Atomic Ratio.
         
         newResults.splice(feIndex, 1, 
           {
@@ -202,9 +227,8 @@ export function calculateOxideMode(
             ...feRow,
             Item: "Fe2O3 (est.)",
             "Atomic Ratio": cappedFe3,
-            // Adjust proportions for display if needed, but Atomic Ratio is the key
-            "Cation Proportion": undefined, // Clear these as they are no longer simple molProps
-            "Oxygen Proportion": undefined
+            "Cation Proportion": 0, 
+            "Oxygen Proportion": 0
           }
         );
         results = newResults;
@@ -215,29 +239,16 @@ export function calculateOxideMode(
   return results;
 }
 
-// IUPAC/IMA standard ordering priorities for mineral formulas.
-// Lower values = appears earlier in the formula.
-// Grouping: Large Cations (A) -> Medium Cations (M) -> Network Formers (T) -> Anions
 export const CATION_ORDER: Record<string, number> = {
-  // 1. Alkali & Large Alkaline Earth Metals (Large/A-site)
   Cs: 10, Rb: 20, K: 30, Na: 40, Li: 50,
   Ba: 60, Sr: 70, Ca: 80,
-  
-  // 2. Rare Earth Elements (REE)
   La: 100, Ce: 110, Pr: 120, Nd: 130, Sm: 140, Eu: 150, Gd: 160,
-  
-  // 3. Medium Cations (Transition metals, Mg, etc. / M-site)
   Mg: 200, Fe: 210, Mn: 220, Ni: 230, Co: 240, Zn: 250, Cu: 260,
-  // High-valence medium cations
   Al: 300, Cr: 310, V: 320, Sc: 330,
   Ti: 340, Zr: 350, Sn: 360,
-  
-  // 4. Small Cations (Network Formers / T-site)
   Si: 400, P: 410, B: 430,
-  
-  // 5. Anions
   O: 1000, F: 1010, Cl: 1020, OH: 1030, S: 1040,
-  As: 1050, Sb: 1060, Se: 1070, Te: 1080 // Sulfide/Sulfosalt anions
+  As: 1050, Sb: 1060, Se: 1070, Te: 1080
 };
 
 export function generateEmpiricalFormula(
@@ -255,7 +266,6 @@ export function generateEmpiricalFormula(
     if (ratio > 0.0001) {
       let symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
       
-      // Handle estimated Iron states
       if (res.Item === "FeO (est.)") symbol = "Fe²⁺";
       if (res.Item === "Fe2O3 (est.)") symbol = "Fe³⁺";
       
@@ -268,25 +278,18 @@ export function generateEmpiricalFormula(
 
   elementsData.sort((a, b) => {
     if (a.priority !== b.priority) return a.priority - b.priority;
-    // Tie-break for same priority (e.g. Fe2+ and Fe3+)
     return a.symbol.localeCompare(b.symbol);
   });
 
   const formatRatio = (num: number) => {
-    // If it's effectively an integer (within a very tight tolerance), return as integer string
     if (Math.abs(num - Math.round(num)) < 0.00001) {
       const intVal = Math.round(num);
       return intVal === 1 ? "" : intVal.toString();
     }
-    
-    // Use 4 significant figures for scientific precision
     let formatted = num.toPrecision(4);
-    
-    // Remove trailing zeros after decimal point and the decimal point if not needed
     if (formatted.includes(".")) {
       formatted = formatted.replace(/\.?0+$/, "");
     }
-    
     return formatted === "1" ? "" : formatted;
   };
 
@@ -300,20 +303,16 @@ export function generateEmpiricalFormula(
     formula += `${a.symbol}${formatRatio(a.ratio)}`;
   });
 
-  // Handle Oxygen
   if (options?.mode === "oxide") {
-    // In oxide mode, O is always appended based on targetOxygen
     if (options.targetOxygen !== undefined) {
       const roundedO = Math.round(options.targetOxygen * 100) / 100;
       formula += `O${roundedO === 1 ? "" : roundedO}`;
     }
   } else {
-    // In element mode, check if O is in the results
     const oRes = elementsData.find(e => e.symbol === "O");
     if (oRes) {
       formula += `O${formatRatio(oRes.ratio)}`;
     } else if (options?.normalizationMode === "stoichiometric-oxygen" && options.targetOxygen !== undefined) {
-      // If O wasn't selected but we normalized by stoichiometric O
       const roundedO = Math.round(options.targetOxygen * 100) / 100;
       formula += `O${roundedO === 1 ? "" : roundedO}`;
     }
@@ -322,20 +321,19 @@ export function generateEmpiricalFormula(
   return formula;
 }
 
-export function identifyMineral(results: CalculationResult[], mineralDb: MineralData[]): { name: string; score: number }[] {
+export function identifyMineral(results: CalculationResult[], mineralDb: MineralData[]): IdentificationCandidate[] {
   const EXCLUDED_FOR_COMPARE = ["O", "H"];
   
   const calcRatios: Record<string, number> = {};
   results.forEach(res => {
     const symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
-    // Only compare non-volatile/non-oxygen elements to focus on cation/anion framework
     if (!EXCLUDED_FOR_COMPARE.includes(symbol)) {
       calcRatios[symbol] = res["Atomic Ratio"];
     }
   });
 
-  const scores = mineralDb.map(mineral => {
-    const dbCounts = parseComplexFormula(mineral.formula);
+  const scores: IdentificationCandidate[] = mineralDb.map(mineral => {
+    const dbCounts = mineral.parsedFormula || parseComplexFormula(mineral.formula);
     const dbCompareProps: Record<string, number> = {};
     
     for (const [k, v] of Object.entries(dbCounts)) {
@@ -354,9 +352,22 @@ export function identifyMineral(results: CalculationResult[], mineralDb: Mineral
 
     return {
       name: `${mineral.nameJA} (${mineral.nameEN})`,
+      nameEN: mineral.nameEN,
+      category: mineral.category,
+      formula: mineral.formula,
       score
     };
   });
 
   return scores.sort((a, b) => a.score - b.score);
+}
+
+/**
+ * Pre-parses the mineral database to populate 'parsedFormula' field.
+ */
+export function preParseMineralDb(mineralDb: MineralData[]): MineralData[] {
+  return mineralDb.map(mineral => ({
+    ...mineral,
+    parsedFormula: parseComplexFormula(mineral.formula)
+  }));
 }
