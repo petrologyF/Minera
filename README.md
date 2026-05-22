@@ -1,4 +1,4 @@
-# Minera 💎
+# Minera
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
@@ -13,10 +13,13 @@
 ## ✨ Features
 
 - **Empirical Formula Calculation**: Precise calculation of atomic ratios based on weight percentages (wt%).
-- **Site-Based Structural Formula**: Automatically groups elements into crystallographic sites (e.g., A, B, M, T sites) based on the identified mineral structure.
-- **Mineral Identification**: Scores and suggests potential mineral matches by comparing calculated ratios with a built-in database.
+- **Structural Formula (Site Assignment)**: Automatically groups elements into crystallographic sites (e.g., A, B, M, T sites) based on the identified mineral structure.
+- **Mineral Identification**: Automatically identifies mineral species with a percentage-based match score and quality indicators:
+  - **◎ (Perfect Match)**: Near-zero deviation from ideal composition.
+  - **○ (High Match)**: Match percentage ≥ 95%.
+  - **Δ (Candidate)**: Lower match percentage or potential alternative species.
 - **Multi-Mode Support**:
-  - **Oxide Mode**: Normalization based on a fixed number of oxygens. Supports iron valence estimation (Droop method).
+  - **Oxide Mode**: Normalization based on a fixed number of oxygens. Supports iron valence estimation (Droop 1987 method).
   - **Element Mode**: Normalization based on specific element ratios (e.g., S=1) or total anions.
 - **History Management**: Automatically saves calculation history to local storage for quick retrieval.
 - **Professional Export**: Copy formulas in LaTeX `\ce{}` (mhchem) format or export detailed data to CSV.

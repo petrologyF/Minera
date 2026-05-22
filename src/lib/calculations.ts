@@ -243,9 +243,28 @@ export function identifyMineral(results: CalculationResult[], mineralDb: Mineral
     const dbProps: Record<string, number> = {};
     const counts = mineral.parsedFormula || parseComplexFormula(mineral.formula);
     for (const [k, v] of Object.entries(counts)) if (!EXCLUDED.includes(k)) dbProps[k] = v;
-    let score = 0; new Set([...Object.keys(calcRatios), ...Object.keys(dbProps)]).forEach(el => { score += Math.pow((calcRatios[el] || 0) - (dbProps[el] || 0), 2); });
+    
+    let score = 0; 
+    let sumDb = 0;
+    new Set([...Object.keys(calcRatios), ...Object.keys(dbProps)]).forEach(el => { 
+      const valCalc = calcRatios[el] || 0;
+      const valDb = dbProps[el] || 0;
+      score += Math.pow(valCalc - valDb, 2); 
+      sumDb += valDb;
+    });
+    
+    const distance = Math.sqrt(score);
+    const matchPercentage = Math.max(0, 100 * (1 - distance / (sumDb || 1)));
+
     // Keep mineral name as "English (Japanese)"
-    return { name: `${mineral.nameEN.charAt(0).toUpperCase() + mineral.nameEN.slice(1)} (${mineral.nameJA})`, nameEN: mineral.nameEN, category: mineral.category, formula: mineral.formula, score };
+    return { 
+      name: `${mineral.nameEN.charAt(0).toUpperCase() + mineral.nameEN.slice(1)} (${mineral.nameJA})`, 
+      nameEN: mineral.nameEN, 
+      category: mineral.category, 
+      formula: mineral.formula, 
+      score,
+      matchPercentage
+    };
   });
   return scores.sort((a, b) => a.score - b.score);
 }

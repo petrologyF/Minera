@@ -452,113 +452,114 @@ export default function Home() {
             <div className="mb-8 border-b border-zinc-200 pb-6">
               <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-600">3. Calculation Settings</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-              <div className="space-y-8 flex flex-col h-full">
-                {mode === "oxide" ? (
-                  <div className="space-y-6 flex-1">
-                    <div>
-                      <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3">Normalized Oxygen Number</label>
+            
+            <div className="max-w-2xl mx-auto">
+              {mode === "oxide" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                  <div>
+                    <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 text-center md:text-left">Normalized Oxygen Number</label>
+                    <input
+                      type="number"
+                      value={targetOxygen}
+                      onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-zinc-50 border border-zinc-300 rounded-sm px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all text-center md:text-left"
+                    />
+                  </div>
+                  <div className="flex flex-col justify-center pt-2">
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Mixed-valence Estimation</label>
                       <input
-                        type="number"
-                        value={targetOxygen}
-                        onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
-                        className="w-full max-w-[120px] bg-zinc-50 border border-zinc-300 rounded-sm px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all"
+                        type="checkbox"
+                        checked={isEstimationEnabled}
+                        onChange={(e) => setIsEstimationEnabled(e.target.checked)}
+                        className="w-5 h-5 text-zinc-900 border-zinc-300 rounded focus:ring-zinc-900 cursor-pointer transition-all"
                       />
                     </div>
-                    <div className="pt-6 border-t border-zinc-200">
-                      <div className="flex items-center justify-between mb-6">
-                        <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Mixed-valence Estimation</label>
-                        <input
-                          type="checkbox"
-                          checked={isEstimationEnabled}
-                          onChange={(e) => setIsEstimationEnabled(e.target.checked)}
-                          className="w-5 h-5 text-zinc-900 border-zinc-300 rounded focus:ring-zinc-900 cursor-pointer transition-all"
-                        />
-                      </div>
-                      
-                      {isEstimationEnabled && (
-                        <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200 bg-zinc-100 p-5 rounded-sm border border-zinc-200">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-[9px] font-black text-gray-500 uppercase tracking-wider mb-2">Target Element</label>
-                              <select
-                                value={estimationElement}
-                                onChange={(e) => setEstimationElement(e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-zinc-900 transition-all cursor-pointer"
-                              >
-                                {Object.keys(ESTIMATABLE_ELEMENTS).map(el => (
-                                  <option key={el} value={el}>{el}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block text-[9px] font-black text-gray-500 uppercase tracking-wider mb-2">Ideal Cation Total</label>
-                              <input
-                                type="number"
-                                value={idealCations}
-                                onChange={(e) => setIdealCations(parseFloat(e.target.value) || 0)}
-                                className="w-full bg-white border border-gray-200 rounded-sm px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-900 transition-all"
-                              />
-                            </div>
+                    
+                    {isEstimationEnabled && (
+                      <div className="animate-in fade-in zoom-in-95 duration-200 bg-zinc-100 p-4 rounded-sm border border-zinc-200 space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[8px] font-black text-gray-500 uppercase tracking-wider mb-1.5 text-center">Element</label>
+                            <select
+                              value={estimationElement}
+                              onChange={(e) => setEstimationElement(e.target.value)}
+                              className="w-full bg-white border border-gray-200 rounded-sm px-2 py-1.5 text-xs focus:outline-none focus:border-zinc-900 transition-all cursor-pointer font-bold"
+                            >
+                              {Object.keys(ESTIMATABLE_ELEMENTS).map(el => (
+                                <option key={el} value={el}>{el}</option>
+                              ))}
+                            </select>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6 flex-1">
-                    <div>
-                      <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3">Normalization Mode</label>
-                      <select
-                        value={elNormMode}
-                        onChange={(e) => setElNormMode(e.target.value as any)}
-                        className="w-full bg-zinc-50 border border-zinc-300 rounded-sm px-4 py-2.5 text-sm focus:outline-none focus:border-zinc-900 transition-all cursor-pointer font-bold"
-                      >
-                        <option value="none">None (Raw Ratios)</option>
-                        <option value="element-ratio">Specific Element (e.g. S=1)</option>
-                        <option value="total-anions">Total Anions Sum</option>
-                        <option value="stoichiometric-oxygen">Stoichiometric Oxygen</option>
-                      </select>
-                    </div>
-                    {elNormMode === "element-ratio" && (
-                      <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div>
-                          <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-wider mb-2">Target</label>
-                          <select
-                            value={elTargetElement}
-                            onChange={(e) => setElTargetElement(e.target.value)}
-                            className="w-full bg-white border border-zinc-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-zinc-900 transition-all cursor-pointer"
-                          >
-                            <option value="">Select...</option>
-                            {selectedItems.map(item => <option key={item} value={item}>{item}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-wider mb-2">Value</label>
-                          <input
-                            type="number"
-                            value={elTargetValue}
-                            onChange={(e) => setElTargetValue(parseFloat(e.target.value) || 0)}
-                            className="w-full bg-white border border-zinc-300 rounded-sm px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-900 transition-all"
-                          />
+                          <div>
+                            <label className="block text-[8px] font-black text-gray-500 uppercase tracking-wider mb-1.5 text-center">Ideal Cations</label>
+                            <input
+                              type="number"
+                              value={idealCations}
+                              onChange={(e) => setIdealCations(parseFloat(e.target.value) || 0)}
+                              className="w-full bg-white border border-gray-200 rounded-sm px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-zinc-900 transition-all text-center"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-              <div className="flex flex-col h-full justify-end">
-                <button
-                  onClick={handleCalculate}
-                  disabled={selectedItems.length === 0}
-                  className="w-full bg-zinc-900 text-zinc-50 font-black uppercase tracking-[0.15em] py-5 px-8 rounded-sm hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed transition-all shadow-xl shadow-zinc-900/10 active:scale-[0.99]"
-                >
-                  Run Calculation
-                </button>
-                <p className="mt-5 text-[10px] font-black text-zinc-500 text-center uppercase tracking-widest">
-                  * Auto-saved to history
-                </p>
-              </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                  <div>
+                    <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 text-center md:text-left">Normalization Mode</label>
+                    <select
+                      value={elNormMode}
+                      onChange={(e) => setElNormMode(e.target.value as any)}
+                      className="w-full bg-zinc-50 border border-zinc-300 rounded-sm px-4 py-3 text-sm focus:outline-none focus:border-zinc-900 transition-all cursor-pointer font-bold"
+                    >
+                      <option value="none">None (Raw Ratios)</option>
+                      <option value="element-ratio">Specific Element (e.g. S=1)</option>
+                      <option value="total-anions">Total Anions Sum</option>
+                      <option value="stoichiometric-oxygen">Stoichiometric Oxygen</option>
+                    </select>
+                  </div>
+                  {elNormMode === "element-ratio" && (
+                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div>
+                        <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-wider mb-2 text-center">Target</label>
+                        <select
+                          value={elTargetElement}
+                          onChange={(e) => setElTargetElement(e.target.value)}
+                          className="w-full bg-white border border-zinc-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-zinc-900 transition-all cursor-pointer text-center"
+                        >
+                          <option value="">Select...</option>
+                          {selectedItems.map(item => <option key={item} value={item}>{item}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-wider mb-2 text-center">Value</label>
+                        <input
+                          type="number"
+                          value={elTargetValue}
+                          onChange={(e) => setElTargetValue(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-white border border-zinc-300 rounded-sm px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-900 transition-all text-center"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-12 flex flex-col items-center border-t border-zinc-200 pt-12 gap-6">
+              <button
+                onClick={handleCalculate}
+                disabled={selectedItems.length === 0}
+                className="group relative bg-zinc-900 text-zinc-50 font-black uppercase tracking-[0.25em] py-5 px-16 rounded-sm hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed transition-all shadow-2xl shadow-zinc-900/20 active:scale-[0.98] flex flex-col items-center gap-4 overflow-hidden min-w-[280px]"
+              >
+                <span className="relative z-10 text-sm">Run Calculation</span>
+                <ChevronDown size={24} className="group-hover:translate-y-1 transition-transform opacity-70" />
+              </button>
+              <p className="text-[10px] font-black text-zinc-400 text-center uppercase tracking-widest">
+                * Auto-saved to history
+              </p>
             </div>
           </section>
 
@@ -599,10 +600,13 @@ export default function Home() {
                           <div className="flex items-start justify-between gap-2">
                             <span className="text-sm font-black leading-tight">{cand.name}</span>
                             <span className={cn(
-                              "shrink-0 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full",
-                              idx === 0 ? "bg-zinc-50/10 text-zinc-50/60" : "bg-zinc-100 text-zinc-500"
+                              "shrink-0 text-[9px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1.5",
+                              idx === 0 ? "bg-zinc-50/10 text-zinc-50/90" : "bg-zinc-100 text-zinc-600"
                             )}>
-                              Δ {cand.score.toPrecision(5)}
+                              <span className="text-[11px] leading-none">
+                                {(cand.matchPercentage ?? 0) > 99.99 ? "◎" : (cand.matchPercentage ?? 0) >= 95 ? "○" : "Δ"}
+                              </span>
+                              <span>{(cand.matchPercentage ?? 0).toFixed(1)}% Match</span>
                             </span>
                           </div>
                           <div className="text-[10px] mt-2 opacity-70 font-bold uppercase tracking-wider">{cand.category}</div>
@@ -682,6 +686,31 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      <footer className="mt-20 border-t border-zinc-200 bg-zinc-50 py-12 px-6">
+        <div className="mx-auto max-w-5xl flex flex-col md:flex-row items-center justify-between gap-8 text-zinc-500">
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <span className="text-sm font-bold text-zinc-900">Minera </span>
+            <p className="text-[10px] font-medium uppercase tracking-widest text-center md:text-left">
+              © 2026 Asahi Fukumoto. Released under the MIT License.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-6">
+            <a 
+              href="https://github.com/petrologyF/Minera" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group flex items-center gap-2 text-xs font-black uppercase tracking-widest hover:text-zinc-900 transition-colors"
+            >
+              <svg viewBox="0 0 24 24" size={18} fill="currentColor" className="w-5 h-5 group-hover:scale-110 transition-transform">
+                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.43.372.823 1.102.823 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+              </svg>
+              GitHub Repository
+            </a>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

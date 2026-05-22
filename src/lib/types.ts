@@ -64,4 +64,5 @@ export interface IdentificationCandidate {
   category: string;
   formula: string;
   score: number;
+  matchPercentage: number;
 }
