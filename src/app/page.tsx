@@ -266,19 +266,19 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[#fafafa] p-4 md:p-12 font-sans text-gray-900 overflow-x-hidden">
-      <div className="mx-auto max-w-6xl">
-        <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <main className="min-h-screen bg-zinc-100/50 p-4 md:p-8 lg:p-12 font-sans text-zinc-800 overflow-x-hidden">
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight mb-3 text-black">Minera</h1>
-            <p className="text-gray-500 max-w-2xl text-lg">
+            <h1 className="text-4xl font-bold tracking-tight mb-3 text-zinc-900">Minera</h1>
+            <p className="text-zinc-700 max-w-2xl text-lg leading-snug">
               Geochemical Formula Calculator & Mineral Identification Tool
             </p>
           </div>
           <div className="flex gap-2">
             <button 
               onClick={() => setIsHistoryOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-sm hover:bg-gray-50 transition-colors shadow-sm"
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-zinc-700 bg-zinc-50 border border-zinc-300 rounded-sm hover:bg-zinc-100 hover:border-zinc-400 transition-all shadow-sm active:scale-[0.98]"
             >
               <HistoryIcon size={16} />
               History
@@ -288,26 +288,26 @@ export default function Home() {
 
         {/* History Sidebar */}
         <div className={cn(
-          "fixed inset-y-0 right-0 w-80 bg-white shadow-2xl z-[100] transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col",
+          "fixed inset-y-0 right-0 w-80 bg-zinc-50 shadow-2xl z-[100] transform transition-transform duration-300 ease-in-out border-l border-zinc-300 flex flex-col",
           isHistoryOpen ? "translate-x-0" : "translate-x-full"
         )}>
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-bold flex items-center gap-2">
+          <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
+            <h2 className="font-bold flex items-center gap-2 text-zinc-900">
               <HistoryIcon size={18} />
               Calculation History
             </h2>
             <div className="flex gap-2">
-              <button onClick={clearHistory} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Clear all">
+              <button onClick={clearHistory} className="p-2 text-zinc-500 hover:text-red-600 transition-colors" title="Clear all">
                 <Trash2 size={16} />
               </button>
-              <button onClick={() => setIsHistoryOpen(false)} className="p-2 text-gray-400 hover:text-black transition-colors">
+              <button onClick={() => setIsHistoryOpen(false)} className="p-2 text-zinc-500 hover:text-zinc-900 transition-colors">
                 <X size={20} />
               </button>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {history.length === 0 ? (
-              <div className="text-center py-20 text-gray-400 italic text-sm">
+              <div className="text-center py-20 text-zinc-500 italic text-sm font-medium">
                 No history yet
               </div>
             ) : (
@@ -315,22 +315,22 @@ export default function Home() {
                 <div 
                   key={entry.id}
                   onClick={() => loadHistoryEntry(entry)}
-                  className="group p-3 border border-gray-100 rounded-sm hover:border-black hover:bg-gray-50 cursor-pointer transition-all relative"
+                  className="group p-4 border border-zinc-200 rounded-sm hover:border-zinc-900 hover:bg-zinc-100 cursor-pointer transition-all relative"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-mono text-gray-400">
+                    <span className="text-[10px] font-mono text-zinc-400">
                       {new Date(entry.timestamp).toLocaleString()}
                     </span>
                     <button 
                       onClick={(e) => deleteHistoryEntry(entry.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 transition-all"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-600 transition-all"
                     >
                       <Trash2 size={12} />
                     </button>
                   </div>
-                  <div className="font-bold text-sm truncate mb-1">{entry.formula}</div>
-                  <div className="text-[10px] text-gray-500 flex justify-between">
-                    <span>{entry.mode === "oxide" ? "Oxide" : "Element"}</span>
+                  <div className="font-bold text-sm truncate mb-1 text-zinc-900">{entry.formula}</div>
+                  <div className="text-[10px] text-zinc-600 flex justify-between">
+                    <span className="uppercase tracking-wider font-bold opacity-80">{entry.mode === "oxide" ? "Oxide" : "Element"}</span>
                     <span className="truncate max-w-[120px] text-right">{entry.topCandidate}</span>
                   </div>
                 </div>
@@ -339,27 +339,27 @@ export default function Home() {
           </div>
         </div>
         {isHistoryOpen && (
-          <div className="fixed inset-0 bg-black/5 z-[90] backdrop-blur-[1px]" onClick={() => setIsHistoryOpen(false)} />
+          <div className="fixed inset-0 bg-zinc-900/10 z-[90] backdrop-blur-[1px]" onClick={() => setIsHistoryOpen(false)} />
         )}
 
-        <div className="space-y-8 max-w-4xl mx-auto pb-40">
+        <div className="space-y-12 pb-40">
           {/* 1. Component Selection */}
-          <section ref={section1Ref} className="bg-white border border-gray-200 rounded-sm p-4 md:p-6 shadow-sm scroll-mt-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">1. Select Components</h2>
-              <div className="flex bg-gray-100 p-1 rounded-sm w-full sm:w-auto">
+          <section ref={section1Ref} className="bg-zinc-50 border border-zinc-200 rounded-sm p-6 md:p-8 shadow-sm scroll-mt-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4 border-b border-zinc-200 pb-6">
+              <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-600">1. Select Components</h2>
+              <div className="flex bg-zinc-100 p-1 rounded-sm w-full sm:w-auto shadow-inner border border-zinc-200">
                 <button
                   onClick={() => setMode("element")}
-                  className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-sm transition-all ${
-                    mode === "element" ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
+                  className={`flex-1 sm:flex-none px-6 py-2 text-xs font-black uppercase tracking-widest rounded-sm transition-all ${
+                    mode === "element" ? "bg-zinc-50 text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
                   }`}
                 >
                   Elements
                 </button>
                 <button
                   onClick={() => setMode("oxide")}
-                  className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-sm transition-all ${
-                    mode === "oxide" ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
+                  className={`flex-1 sm:flex-none px-6 py-2 text-xs font-black uppercase tracking-widest rounded-sm transition-all ${
+                    mode === "oxide" ? "bg-zinc-50 text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
                   }`}
                 >
                   Oxides
@@ -367,115 +367,124 @@ export default function Home() {
               </div>
             </div>
             
-            <PeriodicTable selectedItems={selectedItems} onToggleItem={toggleItem} mode={mode} />
+            <div className="w-full">
+              <PeriodicTable selectedItems={selectedItems} onToggleItem={toggleItem} mode={mode} />
+            </div>
 
-            <div className="mt-8 flex justify-center border-t border-gray-50 pt-6">
+            <div className="mt-10 flex justify-center border-t border-zinc-200 pt-8">
               <button 
                 onClick={() => scrollToSection(section2Ref)}
                 disabled={selectedItems.length === 0}
-                className="group flex flex-col items-center gap-2 px-8 py-3 text-sm font-bold text-gray-400 hover:text-black transition-all disabled:opacity-0"
+                className="group flex flex-col items-center gap-2 px-10 py-4 text-xs font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-black transition-all disabled:opacity-0"
               >
                 Go to Input Phase
-                <ChevronDown size={20} className="group-hover:translate-y-1 transition-transform" />
+                <ChevronDown size={22} className="group-hover:translate-y-1.5 transition-transform" />
               </button>
             </div>
           </section>
 
           {/* 2. Analytical Data Input */}
-          <section ref={section2Ref} className="bg-white border border-gray-200 rounded-sm p-4 md:p-6 shadow-sm scroll-mt-6">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">2. Analytical Data Input (wt%)</h2>
+          <section ref={section2Ref} className="bg-zinc-50 border border-zinc-200 rounded-sm p-6 md:p-8 shadow-sm scroll-mt-8">
+            <div className="mb-8 border-b border-zinc-200 pb-6">
+              <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-600">2. Analytical Data Input (wt%)</h2>
+            </div>
             
             {selectedItems.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="py-3 font-semibold text-sm text-gray-600">Component</th>
-                      <th className="py-3 font-semibold text-sm text-gray-600">Weight Percent (wt%)</th>
+                    <tr className="border-b-2 border-zinc-200">
+                      <th className="py-4 px-2 font-bold text-xs uppercase tracking-widest text-zinc-600">Component</th>
+                      <th className="py-4 px-2 font-bold text-xs uppercase tracking-widest text-zinc-600">Weight Percent (wt%)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedItems.map((item) => (
-                      <tr key={item} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                        <td className="py-4 text-sm font-medium">{item}</td>
-                        <td className="py-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={wtPercents[item] || ""}
-                            onChange={(e) => handleWtChange(item, e.target.value)}
-                            className="w-full max-w-[200px] bg-gray-50 border border-gray-200 rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-black transition-all"
-                            placeholder="0.00"
-                          />
+                      <tr key={item} className="border-b border-zinc-100 hover:bg-zinc-100 transition-colors group">
+                        <td className="py-5 px-2 text-sm font-bold text-zinc-800">{item}</td>
+                        <td className="py-3 px-2">
+                          <div className="relative max-w-[240px]">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={wtPercents[item] || ""}
+                              onChange={(e) => handleWtChange(item, e.target.value)}
+                              className="w-full bg-zinc-50 border border-zinc-200 rounded-sm px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all"
+                              placeholder="0.00"
+                            />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-400 group-focus-within:text-zinc-600">%</span>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-gray-50">
-                      <td className="py-4 px-3 text-sm font-bold text-gray-900">Total</td>
-                      <td className={`py-4 px-3 text-sm font-bold ${totalWt < 98 || totalWt > 102 ? 'text-orange-500' : 'text-green-600'}`}>
-                        {totalWt.toFixed(2)} %
+                    <tr className="bg-zinc-100 border-t-2 border-zinc-200">
+                      <td className="py-6 px-4 text-xs font-black uppercase tracking-widest text-zinc-900">Total Composition</td>
+                      <td className={`py-6 px-4 text-sm font-mono font-black ${totalWt < 98 || totalWt > 102 ? 'text-orange-600' : 'text-zinc-900'}`}>
+                        {totalWt.toPrecision(5)} %
                       </td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
             ) : (
-              <p className="text-gray-400 text-sm italic py-10 text-center border-2 border-dashed border-gray-50 rounded-sm">
+              <p className="text-zinc-500 text-sm font-medium italic py-16 text-center border-2 border-dashed border-zinc-200 rounded-sm">
                 Please select components from the periodic table above.
               </p>
             )}
 
             {selectedItems.length > 0 && (
-              <div className="mt-8 flex justify-center border-t border-gray-50 pt-6">
+              <div className="mt-10 flex justify-center border-t border-zinc-200 pt-8">
                 <button 
                   onClick={() => scrollToSection(section3Ref)}
-                  className="group flex flex-col items-center gap-2 px-8 py-3 text-sm font-bold text-gray-400 hover:text-black transition-all"
+                  className="group flex flex-col items-center gap-2 px-10 py-4 text-xs font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-black transition-all"
                 >
                   Go to Calculation Settings
-                  <ChevronDown size={20} className="group-hover:translate-y-1 transition-transform" />
+                  <ChevronDown size={22} className="group-hover:translate-y-1.5 transition-transform" />
                 </button>
               </div>
             )}
           </section>
 
           {/* 3. Calculation Settings */}
-          <section ref={section3Ref} className="bg-white border border-gray-200 rounded-sm p-4 md:p-6 shadow-sm scroll-mt-6">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">3. Calculation Settings</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-              <div className="space-y-6">
+          <section ref={section3Ref} className="bg-zinc-50 border border-zinc-200 rounded-sm p-6 md:p-8 shadow-sm scroll-mt-8">
+            <div className="mb-8 border-b border-zinc-200 pb-6">
+              <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-600">3. Calculation Settings</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div className="space-y-8 flex flex-col h-full">
                 {mode === "oxide" ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6 flex-1">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalized Oxygen Number</label>
+                      <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3">Normalized Oxygen Number</label>
                       <input
                         type="number"
                         value={targetOxygen}
                         onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                        className="w-full max-w-[120px] bg-zinc-50 border border-zinc-300 rounded-sm px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all"
                       />
                     </div>
-                    <div className="pt-4 border-t border-gray-100">
-                      <div className="flex items-center justify-between mb-4">
-                        <label className="text-xs font-bold text-gray-500 uppercase">Mixed-valence Estimation</label>
+                    <div className="pt-6 border-t border-zinc-200">
+                      <div className="flex items-center justify-between mb-6">
+                        <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Mixed-valence Estimation</label>
                         <input
                           type="checkbox"
                           checked={isEstimationEnabled}
                           onChange={(e) => setIsEstimationEnabled(e.target.checked)}
-                          className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                          className="w-5 h-5 text-zinc-900 border-zinc-300 rounded focus:ring-zinc-900 cursor-pointer transition-all"
                         />
                       </div>
                       
                       {isEstimationEnabled && (
-                        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                          <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200 bg-zinc-100 p-5 rounded-sm border border-zinc-200">
+                          <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Target Element</label>
+                              <label className="block text-[9px] font-black text-gray-500 uppercase tracking-wider mb-2">Target Element</label>
                               <select
                                 value={estimationElement}
                                 onChange={(e) => setEstimationElement(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none"
+                                className="w-full bg-white border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-zinc-900 transition-all cursor-pointer"
                               >
                                 {Object.keys(ESTIMATABLE_ELEMENTS).map(el => (
                                   <option key={el} value={el}>{el}</option>
@@ -483,12 +492,12 @@ export default function Home() {
                               </select>
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Ideal Cation Total</label>
+                              <label className="block text-[9px] font-black text-gray-500 uppercase tracking-wider mb-2">Ideal Cation Total</label>
                               <input
                                 type="number"
                                 value={idealCations}
                                 onChange={(e) => setIdealCations(parseFloat(e.target.value) || 0)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                                className="w-full bg-white border border-gray-200 rounded-sm px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-900 transition-all"
                               />
                             </div>
                           </div>
@@ -497,13 +506,13 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-6 flex-1">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Mode</label>
+                      <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3">Normalization Mode</label>
                       <select
                         value={elNormMode}
                         onChange={(e) => setElNormMode(e.target.value as any)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                        className="w-full bg-zinc-50 border border-zinc-300 rounded-sm px-4 py-2.5 text-sm focus:outline-none focus:border-zinc-900 transition-all cursor-pointer font-bold"
                       >
                         <option value="none">None (Raw Ratios)</option>
                         <option value="element-ratio">Specific Element (e.g. S=1)</option>
@@ -512,21 +521,27 @@ export default function Home() {
                       </select>
                     </div>
                     {elNormMode === "element-ratio" && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <select
-                          value={elTargetElement}
-                          onChange={(e) => setElTargetElement(e.target.value)}
-                          className="w-full bg-gray-50 border border-gray-200 rounded-sm px-2 py-1.5 text-sm focus:outline-none"
-                        >
-                          <option value="">Target...</option>
-                          {selectedItems.map(item => <option key={item} value={item}>{item}</option>)}
-                        </select>
-                        <input
-                          type="number"
-                          value={elTargetValue}
-                          onChange={(e) => setElTargetValue(parseFloat(e.target.value) || 0)}
-                          className="w-full bg-gray-50 border border-gray-200 rounded-sm px-2 py-1.5 text-sm focus:outline-none"
-                        />
+                      <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div>
+                          <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-wider mb-2">Target</label>
+                          <select
+                            value={elTargetElement}
+                            onChange={(e) => setElTargetElement(e.target.value)}
+                            className="w-full bg-white border border-zinc-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-zinc-900 transition-all cursor-pointer"
+                          >
+                            <option value="">Select...</option>
+                            {selectedItems.map(item => <option key={item} value={item}>{item}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-wider mb-2">Value</label>
+                          <input
+                            type="number"
+                            value={elTargetValue}
+                            onChange={(e) => setElTargetValue(parseFloat(e.target.value) || 0)}
+                            className="w-full bg-white border border-zinc-300 rounded-sm px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-900 transition-all"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -536,12 +551,12 @@ export default function Home() {
                 <button
                   onClick={handleCalculate}
                   disabled={selectedItems.length === 0}
-                  className="w-full bg-black text-white font-bold py-4 px-6 rounded-sm hover:bg-gray-800 disabled:bg-gray-200 disabled:cursor-not-allowed transition-all shadow-md active:scale-[0.98]"
+                  className="w-full bg-zinc-900 text-zinc-50 font-black uppercase tracking-[0.15em] py-5 px-8 rounded-sm hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed transition-all shadow-xl shadow-zinc-900/10 active:scale-[0.99]"
                 >
-                  Run Calculation & View Results
+                  Run Calculation
                 </button>
-                <p className="mt-4 text-[10px] text-gray-400 text-center">
-                  * Results are automatically saved to history upon calculation.
+                <p className="mt-5 text-[10px] font-black text-zinc-500 text-center uppercase tracking-widest">
+                  * Auto-saved to history
                 </p>
               </div>
             </div>
@@ -549,39 +564,50 @@ export default function Home() {
 
           {/* 4. Results */}
           {results && (
-            <section ref={section4Ref} className="bg-white border border-gray-200 rounded-sm p-4 md:p-6 shadow-sm space-y-8 animate-in border-l-4 border-l-black overflow-hidden scroll-mt-6">
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Empirical Formula</h2>
-                  <div className="bg-gray-50 p-4 md:p-8 rounded-sm border border-gray-100 flex items-center justify-center min-h-[100px]">
+            <section ref={section4Ref} className="bg-zinc-50 border border-zinc-200 rounded-sm p-6 md:p-8 shadow-sm space-y-12 animate-in border-l-4 border-l-zinc-900 overflow-hidden scroll-mt-8">
+              <div className="space-y-12">
+                <div className="space-y-6">
+                  <h2 className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 text-center border-b border-zinc-200 pb-4">Empirical Formula</h2>
+                  <div className="bg-zinc-100 p-8 md:p-12 rounded-sm border border-zinc-200 flex items-center justify-center min-h-[120px] transition-all">
                     <FormulaDisplay formula={formula} />
                   </div>
                 </div>
 
                 {structuralFormula && (
-                  <div>
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4 italic">Structural Formula</h2>
-                    <div className="bg-gray-900 p-4 md:p-8 rounded-sm border border-gray-800 flex items-center justify-center min-h-[100px] shadow-inner">
+                  <div className="space-y-6">
+                    <h2 className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 text-center border-b border-zinc-200 pb-4 italic">Structural Formula (Site-Grouped)</h2>
+                    <div className="bg-zinc-900 p-8 md:p-12 rounded-sm border border-zinc-800 flex items-center justify-center min-h-[120px] shadow-2xl transition-all">
                       <FormulaDisplay formula={structuralFormula} isDark />
                     </div>
-                    <p className="mt-2 text-[10px] text-gray-400 leading-relaxed italic text-center">
-                      Auto-grouped by crystallographic sites based on the top candidate's structure.
+                    <p className="mt-4 text-[10px] font-bold text-zinc-500 leading-relaxed italic text-center uppercase tracking-wider">
+                      Crystallographic sites automatically assigned
                     </p>
                   </div>
                 )}
 
-                <div>
-                  <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Mineral Identification</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="pt-6">
+                  <h2 className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-6 px-1">Mineral Identification Candidates</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {candidates.map((cand, idx) => (
-                      <div key={idx} className={`p-4 rounded-sm border transition-all ${idx === 0 ? 'bg-black text-white border-black shadow-lg ring-2 ring-black ring-offset-2' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-300'}`}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-bold">{cand.name}</span>
-                          <span className={`text-[9px] font-mono ${idx === 0 ? 'text-gray-400' : 'text-gray-300'}`}>
-                            {cand.score.toFixed(4)}
-                          </span>
+                      <div key={idx} className={cn(
+                        "p-5 rounded-sm border transition-all flex flex-col justify-between min-h-[110px]",
+                        idx === 0 
+                          ? "bg-zinc-900 text-zinc-50 border-zinc-900 shadow-xl ring-4 ring-zinc-900/5 ring-offset-4 scale-[1.01]" 
+                          : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-400 hover:shadow-sm"
+                      )}>
+                        <div className="mb-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-sm font-black leading-tight">{cand.name}</span>
+                            <span className={cn(
+                              "shrink-0 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full",
+                              idx === 0 ? "bg-zinc-50/10 text-zinc-50/60" : "bg-zinc-100 text-zinc-500"
+                            )}>
+                              Δ {cand.score.toPrecision(5)}
+                            </span>
+                          </div>
+                          <div className="text-[10px] mt-2 opacity-70 font-bold uppercase tracking-wider">{cand.category}</div>
                         </div>
-                        <div className="text-[10px] opacity-70 font-serif italic truncate">{cand.formula}</div>
+                        <div className="text-xs font-serif italic truncate pt-3 border-t border-current/20">{cand.formula}</div>
                       </div>
                     ))}
                   </div>
@@ -589,69 +615,72 @@ export default function Home() {
               </div>
             </section>
           )}
-        </div>
 
-        {results && (
-          <section className="mt-8 bg-white border border-gray-200 rounded-sm p-6 shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Detailed Calculation Table</h2>
-              <button onClick={exportToCSV} className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-gray-600 border border-gray-200 rounded-sm hover:bg-gray-50 transition-all">
-                <Download size={14} />
-                Export CSV
-              </button>
-            </div>
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase cursor-pointer hover:text-black" onClick={() => handleSort("Item")}>
-                    Item <ArrowUpDown size={10} className="inline ml-1" />
-                  </th>
-                  <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase cursor-pointer hover:text-black" onClick={() => handleSort("wt%")}>
-                    wt% <ArrowUpDown size={10} className="inline ml-1" />
-                  </th>
-                  {mode === "oxide" ? (
-                    <>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">Mol. Weight</th>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">Mol. Prop</th>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">Cation Prop</th>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">Oxygen Prop</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">At. Weight</th>
-                      <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase">At. Prop</th>
-                    </>
-                  )}
-                  <th className="py-3 px-4 text-xs font-bold text-gray-500 uppercase cursor-pointer hover:text-black" onClick={() => handleSort("Atomic Ratio")}>
-                    Atomic Ratio <ArrowUpDown size={10} className="inline ml-1" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedResults?.map((res, i) => (
-                  <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-4 text-sm font-bold">{res.Item}</td>
-                    <td className="py-4 px-4 text-sm">{res["wt%"].toFixed(2)}</td>
-                    {mode === "oxide" ? (
-                      <>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as OxideCalculationRow)["Molecular Weight"]?.toFixed(3)}</td>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as OxideCalculationRow)["Molecular Proportion"]?.toFixed(4)}</td>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as OxideCalculationRow)["Cation Proportion"]?.toFixed(4)}</td>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as OxideCalculationRow)["Oxygen Proportion"]?.toFixed(4)}</td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as ElementCalculationRow)["Atomic Weight"]?.toFixed(3)}</td>
-                        <td className="py-4 px-4 text-sm font-mono text-gray-500">{(res as ElementCalculationRow)["Atomic Proportion"]?.toFixed(4)}</td>
-                      </>
-                    )}
-                    <td className="py-4 px-4 text-sm font-bold text-black">{res["Atomic Ratio"].toFixed(4)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
+          {/* 5. Detailed Calculation Table */}
+          {results && (
+            <section className="bg-zinc-50 border border-zinc-200 rounded-sm p-6 md:p-8 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 scroll-mt-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4 border-b border-zinc-200 pb-6">
+                <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-600">Detailed Calculation Table</h2>
+                <button onClick={exportToCSV} className="flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-zinc-700 bg-zinc-50 border border-zinc-300 rounded-sm hover:bg-zinc-100 hover:border-zinc-400 transition-all shadow-sm active:scale-[0.98]">
+                  <Download size={14} />
+                  Export CSV
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[800px]">
+                  <thead>
+                    <tr className="border-b-2 border-zinc-200 bg-zinc-100">
+                      <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em] cursor-pointer hover:text-zinc-900 transition-colors" onClick={() => handleSort("Item")}>
+                        Item <ArrowUpDown size={10} className="inline ml-1" />
+                      </th>
+                      <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em] cursor-pointer hover:text-zinc-900 transition-colors" onClick={() => handleSort("wt%")}>
+                        wt% <ArrowUpDown size={10} className="inline ml-1" />
+                      </th>
+                      {mode === "oxide" ? (
+                        <>
+                          <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em]">Mol. Weight</th>
+                          <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em]">Mol. Prop</th>
+                          <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em]">Cation Prop</th>
+                          <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em]">Oxygen Prop</th>
+                        </>
+                      ) : (
+                        <>
+                          <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em]">At. Weight</th>
+                          <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em]">At. Prop</th>
+                        </>
+                      )}
+                      <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em] cursor-pointer hover:text-zinc-900 transition-colors" onClick={() => handleSort("Atomic Ratio")}>
+                        Atomic Ratio <ArrowUpDown size={10} className="inline ml-1" />
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedResults?.map((res, i) => (
+                      <tr key={i} className="border-b border-zinc-200 hover:bg-zinc-100 transition-colors group">
+                        <td className="py-5 px-4 text-sm font-black text-zinc-900">{res.Item}</td>
+                        <td className="py-5 px-4 text-sm font-mono text-zinc-800">{res["wt%"].toPrecision(5)}</td>
+                        {mode === "oxide" ? (
+                          <>
+                            <td className="py-5 px-4 text-xs font-mono text-zinc-600 group-hover:text-zinc-900 transition-colors">{(res as OxideCalculationRow)["Molecular Weight"]?.toPrecision(5)}</td>
+                            <td className="py-5 px-4 text-xs font-mono text-zinc-600 group-hover:text-zinc-900 transition-colors">{(res as OxideCalculationRow)["Molecular Proportion"]?.toPrecision(5)}</td>
+                            <td className="py-5 px-4 text-xs font-mono text-zinc-600 group-hover:text-zinc-900 transition-colors">{(res as OxideCalculationRow)["Cation Proportion"]?.toPrecision(5)}</td>
+                            <td className="py-5 px-4 text-xs font-mono text-zinc-600 group-hover:text-zinc-900 transition-colors">{(res as OxideCalculationRow)["Oxygen Proportion"]?.toPrecision(5)}</td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="py-5 px-4 text-xs font-mono text-zinc-600 group-hover:text-gray-900 transition-colors">{(res as ElementCalculationRow)["Atomic Weight"]?.toPrecision(5)}</td>
+                            <td className="py-5 px-4 text-xs font-mono text-zinc-600 group-hover:text-gray-900 transition-colors">{(res as ElementCalculationRow)["Atomic Proportion"]?.toPrecision(5)}</td>
+                          </>
+                        )}
+                        <td className="py-5 px-4 text-sm font-mono font-black text-zinc-950">{res["Atomic Ratio"].toPrecision(5)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </div>
       </div>
     </main>
   );

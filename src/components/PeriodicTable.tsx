@@ -155,16 +155,18 @@ ElementCell.displayName = "ElementCell";
 export const PeriodicTable = memo(({ selectedItems, onToggleItem, mode }: PeriodicTableProps) => {
   return (
     <div className="w-full overflow-x-auto pb-4 scrollbar-hide">
-      <div className="min-w-[950px] grid grid-cols-18 gap-0 p-1">
-        {periodicTableData.map((item) => (
-          <ElementCell
-            key={item.atomicNumber}
-            item={item}
-            selectedItems={selectedItems}
-            onToggle={onToggleItem}
-            mode={mode}
-          />
-        ))}
+      <div className="min-w-[950px] flex justify-center">
+        <div className="grid grid-cols-18 gap-0 p-1">
+          {periodicTableData.map((item) => (
+            <ElementCell
+              key={item.atomicNumber}
+              item={item}
+              selectedItems={selectedItems}
+              onToggle={onToggleItem}
+              mode={mode}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

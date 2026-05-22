@@ -41,7 +41,7 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ formula, isDark 
     <div className="relative group flex flex-col md:flex-row items-center gap-4 w-full">
       <div className={cn(
         "font-sans font-medium text-xl md:text-2xl tracking-tight select-all overflow-x-auto whitespace-nowrap pb-2 md:pb-0 scrollbar-hide flex-1 text-center md:text-left min-w-0",
-        isDark ? "text-white" : "text-black"
+        isDark ? "text-zinc-50" : "text-zinc-900"
       )}>
         {parts.map((part, i) => {
           const isElementOrDelimiter = part.match(/^([A-Z][a-z]*|[(),·・])$/);
@@ -91,10 +91,10 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ formula, isDark 
         onClick={copyAsLatex}
         className={cn(
           "shrink-0 flex items-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-sm transition-all",
-          "bg-white border border-gray-200 text-gray-400 hover:border-black hover:text-black shadow-sm",
-          copied && "border-green-500 text-green-600 bg-green-50 hover:border-green-500 hover:text-green-600"
+          "bg-zinc-50 border border-zinc-200 text-zinc-500 hover:border-zinc-900 hover:text-zinc-900 shadow-sm",
+          copied && "border-green-600 text-green-700 bg-green-50 hover:border-green-600 hover:text-green-700"
         )}
-        title="LaTeX (\ce{}) 形式でコピー"
+        title="Copy in LaTeX (\ce{}) format"
       >
         {copied ? (
           <>
