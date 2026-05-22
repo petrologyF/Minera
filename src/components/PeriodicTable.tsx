@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo } from "react";
+import React, { memo, useState, useRef, useEffect } from "react";
 import { Toggle } from "@/components/ui/toggle";
 import { periodicTableData } from "@/lib/periodicTableData";
 import { ElementData, ElementCategory } from "@/lib/types";
@@ -30,7 +30,7 @@ const renderFormula = (formula: string) => {
   const parts = formula.split(/(\d+)/);
   return parts.map((part, index) => {
     if (/\d+/.test(part)) {
-      return <sub key={index}>{part}</sub>;
+      return <sub key={index} className="bottom-0 text-[0.8em]">{part}</sub>;
     }
     return part;
   });
@@ -47,6 +47,19 @@ const ElementCell = memo(({
   onToggle: (id: string) => void;
   mode: "element" | "oxide";
 }) => {
+  const [showOptions, setShowOptions] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (mode === "oxide" && !item.commonOxide) {
     return (
       <div 
@@ -57,47 +70,79 @@ const ElementCell = memo(({
   }
 
   const categoryClass = item.category ? CATEGORY_COLORS[item.category] : "bg-white border-gray-200 text-gray-700 hover:bg-gray-100";
+  
+  const currentOxides = [item.commonOxide, ...(item.alternativeOxides || [])];
+  const selectedCount = currentOxides.filter(ox => selectedItems.includes(ox)).length;
+  const isSelected = mode === "element" ? selectedItems.includes(item.symbol) : selectedCount > 0;
 
-  const renderToggle = (id: string, label: string, isSmall = false) => (
-    <Toggle
-      pressed={selectedItems.includes(id)}
-      onPressedChange={() => onToggle(id)}
-      aria-label={`${item.name} (${id})`}
-      className={cn(
-        "w-full flex flex-col items-center justify-center border rounded-sm transition-all duration-200",
-        "data-[state=on]:text-white shadow-sm",
-        categoryClass,
-        isSmall ? "h-7 min-h-0 py-0" : "h-full min-h-[50px]"
-      )}
-    >
-      {!isSmall && (
-        <span className={cn(
-          "text-[10px] font-mono mb-0.5",
-          selectedItems.includes(id) ? "text-white/80" : "text-gray-400"
-        )}>
-          {item.atomicNumber}
-        </span>
-      )}
-      <span className={cn("font-bold leading-none", isSmall ? "text-[10px]" : "text-sm")}>
-        {renderFormula(label)}
-      </span>
-    </Toggle>
-  );
+  const handleMainClick = () => {
+    if (mode === "oxide" && item.alternativeOxides?.length) {
+      setShowOptions(!showOptions);
+    } else {
+      onToggle(mode === "element" ? item.symbol : item.commonOxide);
+    }
+  };
 
   return (
     <div 
+      ref={containerRef}
       style={{ gridColumnStart: item.group, gridRowStart: item.period }}
-      className="p-0.5 flex flex-col gap-0.5"
+      className="p-0.5 h-14 relative"
     >
-      {mode === "element" ? (
-        renderToggle(item.symbol, item.symbol)
-      ) : (
-        <>
-          {renderToggle(item.commonOxide, item.commonOxide, !!item.alternativeOxides?.length)}
-          {item.alternativeOxides?.map(alt => (
-            renderToggle(alt, alt, true)
+      <Toggle
+        pressed={isSelected}
+        onPressedChange={handleMainClick}
+        aria-label={`${item.name} (${item.symbol})`}
+        className={cn(
+          "w-full h-full flex flex-col items-center justify-center border rounded-sm transition-all duration-200 p-1 relative",
+          "data-[state=on]:text-white shadow-sm",
+          categoryClass
+        )}
+      >
+        <span className={cn(
+          "text-[9px] font-mono mb-0.5",
+          isSelected ? "text-white/80" : "text-gray-400"
+        )}>
+          {item.atomicNumber}
+        </span>
+        <span className="text-sm font-bold leading-none">
+          {mode === "element" ? item.symbol : renderFormula(item.commonOxide)}
+        </span>
+        
+        {mode === "oxide" && item.alternativeOxides?.length && (
+          <div className={cn(
+            "absolute top-0.5 right-0.5 text-[8px] font-bold",
+            isSelected ? "text-white/60" : "text-gray-300"
+          )}>
+            +
+          </div>
+        )}
+      </Toggle>
+
+      {showOptions && (
+        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-1 bg-white border border-gray-200 shadow-xl rounded-md p-1.5 flex flex-col gap-1 min-w-[80px]">
+          <div className="text-[10px] font-bold text-gray-400 mb-1 px-1 border-b border-gray-100 pb-1 text-center">
+            {item.name}
+          </div>
+          {currentOxides.map(ox => (
+            <button
+              key={ox}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle(ox);
+              }}
+              className={cn(
+                "px-2 py-1.5 text-xs font-bold rounded-sm text-left transition-colors flex items-center justify-between gap-3",
+                selectedItems.includes(ox) 
+                  ? "bg-black text-white" 
+                  : "hover:bg-gray-100 text-gray-700"
+              )}
+            >
+              <span>{renderFormula(ox)}</span>
+              {selectedItems.includes(ox) && <span className="text-[10px]">✓</span>}
+            </button>
           ))}
-        </>
+        </div>
       )}
     </div>
   );
@@ -108,7 +153,7 @@ ElementCell.displayName = "ElementCell";
 export const PeriodicTable = memo(({ selectedItems, onToggleItem, mode }: PeriodicTableProps) => {
   return (
     <div className="w-full overflow-x-auto pb-4 scrollbar-hide">
-      <div className="min-w-[900px] grid grid-cols-18 gap-0 p-1 auto-rows-fr">
+      <div className="min-w-[950px] grid grid-cols-18 gap-0 p-1">
         {periodicTableData.map((item) => (
           <ElementCell
             key={item.atomicNumber}
