@@ -4,8 +4,9 @@ import {
   parseComplexFormula, 
   calculateOxideMode, 
   generateEmpiricalFormula 
-} from './calculations.ts';
-import { CalculationResult } from './types.ts';
+} from './calculations';
+import { CalculationResult } from './types';
+
 
 const mockAtomicWeights = {
   Si: 28.085,

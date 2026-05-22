@@ -9,7 +9,8 @@ import {
   calculateOxideMode, 
   generateEmpiricalFormula, 
   identifyMineral,
-  preParseMineralDb
+  preParseMineralDb,
+  ESTIMATABLE_ELEMENTS
 } from "@/lib/calculations";
 import { mineralDb as rawMineralDb } from "@/lib/mineralDb";
 import { CalculationResult, IdentificationCandidate, OxideCalculationRow, ElementCalculationRow } from "@/lib/types";
@@ -24,7 +25,8 @@ export default function Home() {
   const [mode, setMode] = useState<"element" | "oxide">("oxide");
   const [wtPercents, setWtPercents] = useState<Record<string, number>>({});
   const [targetOxygen, setTargetOxygen] = useState<number>(4.0);
-  const [isFeEstimationEnabled, setIsFeEstimationEnabled] = useState<boolean>(false);
+  const [isEstimationEnabled, setIsEstimationEnabled] = useState<boolean>(false);
+  const [estimationElement, setEstimationElement] = useState<string>("Fe");
   const [idealCations, setIdealCations] = useState<number>(3.0);
   const [results, setResults] = useState<CalculationResult[] | null>(null);
   const [formula, setFormula] = useState<string>("");
@@ -78,7 +80,12 @@ export default function Home() {
 
     let calcResults: CalculationResult[];
     if (mode === "oxide") {
-      calcResults = calculateOxideMode(input, atomicWeightsMap, targetOxygen, isFeEstimationEnabled ? idealCations : undefined);
+      calcResults = calculateOxideMode(
+        input, 
+        atomicWeightsMap, 
+        targetOxygen, 
+        isEstimationEnabled ? { idealCations, elementSymbol: estimationElement } : undefined
+      );
       setFormula(generateEmpiricalFormula(calcResults, { mode: "oxide", targetOxygen }));
     } else {
       const norm = elNormMode === "none" ? undefined : {
@@ -259,23 +266,43 @@ export default function Home() {
                     </div>
                     <div className="pt-4 border-t border-gray-100">
                       <div className="flex items-center justify-between mb-4">
-                        <label className="text-xs font-bold text-gray-500 uppercase">鉄原子価（Fe²⁺/Fe³⁺）推定</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase">原子価（Mixed-valence）推定</label>
                         <input
                           type="checkbox"
-                          checked={isFeEstimationEnabled}
-                          onChange={(e) => setIsFeEstimationEnabled(e.target.checked)}
+                          checked={isEstimationEnabled}
+                          onChange={(e) => setIsEstimationEnabled(e.target.checked)}
                           className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
                         />
                       </div>
-                      {isFeEstimationEnabled && (
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase">理論的陽イオン合計</label>
-                          <input
-                            type="number"
-                            value={idealCations}
-                            onChange={(e) => setIdealCations(parseFloat(e.target.value) || 0)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
-                          />
+                      
+                      {isEstimationEnabled && (
+                        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">対象元素</label>
+                              <select
+                                value={estimationElement}
+                                onChange={(e) => setEstimationElement(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none"
+                              >
+                                {Object.keys(ESTIMATABLE_ELEMENTS).map(el => (
+                                  <option key={el} value={el}>{el}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">理論的カチオン数</label>
+                              <input
+                                type="number"
+                                value={idealCations}
+                                onChange={(e) => setIdealCations(parseFloat(e.target.value) || 0)}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                              />
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-gray-400 leading-relaxed">
+                            電荷バランス法により {estimationElement} の原子価状態を推定します（例: スピネルなら 3, ざくろ石なら 8）。
+                          </p>
                         </div>
                       )}
                     </div>
