@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { PeriodicTable } from "@/components/PeriodicTable";
 import { FormulaDisplay } from "@/components/FormulaDisplay";
 import { periodicTableData } from "@/lib/periodicTableData";
@@ -14,11 +14,29 @@ import {
 } from "@/lib/calculations";
 import { mineralDb as rawMineralDb } from "@/lib/mineralDb";
 import { CalculationResult, IdentificationCandidate, OxideCalculationRow, ElementCalculationRow } from "@/lib/types";
-import { Download, Info, History as HistoryIcon, ArrowUpDown } from "lucide-react";
+import { Download, Info, History as HistoryIcon, ArrowUpDown, Trash2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const mineralDb = preParseMineralDb(rawMineralDb);
 
 type SortConfig = { key: keyof CalculationResult; direction: "asc" | "desc" } | null;
+
+interface HistoryEntry {
+  id: string;
+  timestamp: number;
+  mode: "element" | "oxide";
+  selectedItems: string[];
+  wtPercents: Record<string, number>;
+  formula: string;
+  topCandidate?: string;
+  settings: {
+    targetOxygen: number;
+    isEstimationEnabled: boolean;
+    estimationElement: string;
+    idealCations: number;
+    elNormMode: string;
+  };
+}
 
 export default function Home() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -36,6 +54,26 @@ export default function Home() {
   const [elNormMode, setElNormMode] = useState<"none" | "stoichiometric-oxygen" | "element-ratio" | "total-anions">("none");
   const [elTargetElement, setElTargetElement] = useState<string>("");
   const [elTargetValue, setElTargetValue] = useState<number>(1.0);
+
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Load history from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("minera-history");
+    if (saved) {
+      try {
+        setHistory(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load history", e);
+      }
+    }
+  }, []);
+
+  // Save history to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("minera-history", JSON.stringify(history));
+  }, [history]);
 
   const atomicWeightsMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -78,7 +116,10 @@ export default function Home() {
       "wt%": wtPercents[item] || 0
     }));
 
+    if (input.length === 0) return;
+
     let calcResults: CalculationResult[];
+    let currentFormula = "";
     if (mode === "oxide") {
       calcResults = calculateOxideMode(
         input, 
@@ -86,7 +127,7 @@ export default function Home() {
         targetOxygen, 
         isEstimationEnabled ? { idealCations, elementSymbol: estimationElement } : undefined
       );
-      setFormula(generateEmpiricalFormula(calcResults, { mode: "oxide", targetOxygen }));
+      currentFormula = generateEmpiricalFormula(calcResults, { mode: "oxide", targetOxygen });
     } else {
       const norm = elNormMode === "none" ? undefined : {
         mode: elNormMode,
@@ -94,15 +135,60 @@ export default function Home() {
         targetElement: elTargetElement
       };
       calcResults = calculateElementMode(input, atomicWeightsMap, norm);
-      setFormula(generateEmpiricalFormula(calcResults, { 
+      currentFormula = generateEmpiricalFormula(calcResults, { 
         mode: "element", 
         targetOxygen: (elNormMode === "stoichiometric-oxygen" || elNormMode === "total-anions") ? targetOxygen : undefined,
         normalizationMode: elNormMode === "none" ? undefined : (elNormMode === "total-anions" ? "element-ratio" : elNormMode)
-      }));
+      });
     }
 
+    const identified = identifyMineral(calcResults, mineralDb).slice(0, 5);
+    setFormula(currentFormula);
     setResults(calcResults);
-    setCandidates(identifyMineral(calcResults, mineralDb).slice(0, 5));
+    setCandidates(identified);
+
+    // Save to history
+    const entry: HistoryEntry = {
+      id: Math.random().toString(36).substring(2, 9),
+      timestamp: Date.now(),
+      mode,
+      selectedItems: [...selectedItems],
+      wtPercents: { ...wtPercents },
+      formula: currentFormula,
+      topCandidate: identified[0]?.name,
+      settings: {
+        targetOxygen,
+        isEstimationEnabled,
+        estimationElement,
+        idealCations,
+        elNormMode
+      }
+    };
+    setHistory(prev => [entry, ...prev].slice(0, 50));
+  };
+
+  const loadHistoryEntry = (entry: HistoryEntry) => {
+    setMode(entry.mode);
+    setSelectedItems(entry.selectedItems);
+    setWtPercents(entry.wtPercents);
+    setTargetOxygen(entry.settings.targetOxygen);
+    setIsEstimationEnabled(entry.settings.isEstimationEnabled);
+    setEstimationElement(entry.settings.estimationElement);
+    setIdealCations(entry.settings.idealCations);
+    setElNormMode(entry.settings.elNormMode as any);
+    setIsHistoryOpen(false);
+    setResults(null);
+  };
+
+  const deleteHistoryEntry = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHistory(prev => prev.filter(item => item.id !== id));
+  };
+
+  const clearHistory = () => {
+    if (confirm("履歴をすべて削除しますか？")) {
+      setHistory([]);
+    }
   };
 
   const sortedResults = useMemo(() => {
@@ -157,7 +243,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[#fafafa] p-4 md:p-12 font-sans text-gray-900">
+    <main className="min-h-screen bg-[#fafafa] p-4 md:p-12 font-sans text-gray-900 overflow-x-hidden">
       <div className="mx-auto max-w-6xl">
         <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
@@ -167,12 +253,71 @@ export default function Home() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-sm hover:bg-gray-50 transition-colors">
+            <button 
+              onClick={() => setIsHistoryOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-sm hover:bg-gray-50 transition-colors shadow-sm"
+            >
               <HistoryIcon size={16} />
               履歴
             </button>
           </div>
         </header>
+
+        {/* History Sidebar */}
+        <div className={cn(
+          "fixed inset-y-0 right-0 w-80 bg-white shadow-2xl z-[100] transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col",
+          isHistoryOpen ? "translate-x-0" : "translate-x-full"
+        )}>
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="font-bold flex items-center gap-2">
+              <HistoryIcon size={18} />
+              計算履歴
+            </h2>
+            <div className="flex gap-2">
+              <button onClick={clearHistory} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="すべて削除">
+                <Trash2 size={16} />
+              </button>
+              <button onClick={() => setIsHistoryOpen(false)} className="p-2 text-gray-400 hover:text-black transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {history.length === 0 ? (
+              <div className="text-center py-20 text-gray-400 italic text-sm">
+                履歴はありません
+              </div>
+            ) : (
+              history.map(entry => (
+                <div 
+                  key={entry.id}
+                  onClick={() => loadHistoryEntry(entry)}
+                  className="group p-3 border border-gray-100 rounded-sm hover:border-black hover:bg-gray-50 cursor-pointer transition-all relative"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-mono text-gray-400">
+                      {new Date(entry.timestamp).toLocaleString()}
+                    </span>
+                    <button 
+                      onClick={(e) => deleteHistoryEntry(entry.id, e)}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 transition-all"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="font-bold text-sm truncate mb-1">{entry.formula}</div>
+                  <div className="text-[10px] text-gray-500 flex justify-between">
+                    <span>{entry.mode === "oxide" ? "酸化物" : "元素"}</span>
+                    <span className="truncate max-w-[120px] text-right">{entry.topCandidate}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+        {isHistoryOpen && (
+          <div className="fixed inset-0 bg-black/5 z-[90] backdrop-blur-[1px]" onClick={() => setIsHistoryOpen(false)} />
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
@@ -313,7 +458,7 @@ export default function Home() {
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">正規化モード</label>
                       <select
                         value={elNormMode}
-                        onChange={(e) => setElNormMode(e.target.value as "none" | "stoichiometric-oxygen" | "element-ratio" | "total-anions")}
+                        onChange={(e) => setElNormMode(e.target.value as any)}
                         className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
                       >
                         <option value="none">なし（未正規化）</option>
