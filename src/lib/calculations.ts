@@ -83,36 +83,50 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
     const cationCount = Object.values(counts).reduce((a, b) => a + b, 0);
     return { Item: row.Item, "wt%": row["wt%"], "Molecular Weight": mw, "Molecular Proportion": molProp, "Cation Proportion": molProp * cationCount, "Oxygen Proportion": molProp * oCount, "Atomic Ratio": 0 };
   });
-  const totalOProp = results.reduce((sum, res) => sum + (res["Oxygen Proportion"] || 0), 0);
-  const norm = totalOProp > 0 ? targetOxygen / totalOProp : 0;
-  results.forEach(res => { res["Atomic Ratio"] = (res["Cation Proportion"] || 0) * norm; });
+
   if (estimation && estimation.idealCations > 0) {
-    const currentCationSum = results.reduce((sum, res) => sum + res["Atomic Ratio"], 0);
-    if (currentCationSum > estimation.idealCations) {
-      const valences = ESTIMATABLE_ELEMENTS[estimation.elementSymbol];
-      if (valences) {
-        const [vLow, vHigh] = valences; let currentCharge = 0;
-        results.forEach(res => {
-          const symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
-          currentCharge += res["Atomic Ratio"] * (DEFAULT_VALENCES[symbol] || 2);
-        });
-        const idealCharge = 2 * targetOxygen;
-        const atomsToElevate = (idealCharge - currentCharge) / (vHigh - vLow);
-        const targetIdx = results.findIndex(res => res.Item.includes(estimation.elementSymbol));
-        if (targetIdx !== -1 && atomsToElevate > 0) {
-          const totalAtoms = results[targetIdx]["Atomic Ratio"];
-          const cappedElevated = Math.min(atomsToElevate, totalAtoms);
-          const originalRow = results[targetIdx];
-          const formatV = (v: number) => v === 1 ? "" : (v === 2 ? "²⁺" : (v === 3 ? "³⁺" : "⁴⁺"));
-          const newResults = [...results];
-          newResults.splice(targetIdx, 1, 
-            { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vLow)} (est.)`, "Atomic Ratio": totalAtoms - cappedElevated },
-            { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vHigh)} (est.)`, "Atomic Ratio": cappedElevated, "Cation Proportion": 0, "Oxygen Proportion": 0 }
-          );
-          results = newResults;
-        }
+    // Mixed Valence Estimation (e.g. Droop 1987)
+    // 1. Normalize to ideal cation sum
+    const totalCationProp = results.reduce((sum, res) => sum + (res["Cation Proportion"] || 0), 0);
+    const norm = totalCationProp > 0 ? estimation.idealCations / totalCationProp : 0;
+    results.forEach(res => { res["Atomic Ratio"] = (res["Cation Proportion"] || 0) * norm; });
+
+    // 2. Calculate current charge with low valence
+    const valences = ESTIMATABLE_ELEMENTS[estimation.elementSymbol];
+    if (valences) {
+      const [vLow, vHigh] = valences;
+      let currentCharge = 0;
+      results.forEach(res => {
+        const symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
+        // For the target element, use vLow initially
+        const v = (symbol === estimation.elementSymbol) ? vLow : (DEFAULT_VALENCES[symbol] || 2);
+        currentCharge += res["Atomic Ratio"] * v;
+      });
+
+      // 3. Compare with ideal charge for targetOxygen
+      const idealCharge = 2 * targetOxygen;
+      const chargeDeficit = idealCharge - currentCharge;
+      const atomsToElevate = chargeDeficit / (vHigh - vLow);
+
+      const targetIdx = results.findIndex(res => res.Item.includes(estimation.elementSymbol));
+      if (targetIdx !== -1 && atomsToElevate > 0) {
+        const totalAtoms = results[targetIdx]["Atomic Ratio"];
+        const cappedElevated = Math.min(atomsToElevate, totalAtoms);
+        const originalRow = results[targetIdx];
+        const formatV = (v: number) => v === 1 ? "" : (v === 2 ? "²⁺" : (v === 3 ? "³⁺" : "⁴⁺"));
+        const newResults = [...results];
+        newResults.splice(targetIdx, 1, 
+          { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vLow)} (est.)`, "Atomic Ratio": totalAtoms - cappedElevated },
+          { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vHigh)} (est.)`, "Atomic Ratio": cappedElevated, "Cation Proportion": 0, "Oxygen Proportion": 0 }
+        );
+        results = newResults;
       }
     }
+  } else {
+    // Standard Oxygen-based normalization
+    const totalOProp = results.reduce((sum, res) => sum + (res["Oxygen Proportion"] || 0), 0);
+    const norm = totalOProp > 0 ? targetOxygen / totalOProp : 0;
+    results.forEach(res => { res["Atomic Ratio"] = (res["Cation Proportion"] || 0) * norm; });
   }
   return results;
 }
@@ -120,7 +134,8 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
 export const CATION_ORDER: Record<string, number> = {
   Cs: 10, Rb: 20, K: 30, Na: 40, Li: 50, Ba: 60, Sr: 70, Ca: 80, La: 100, Ce: 110, Pr: 120, Nd: 130, Sm: 140, Eu: 150, Gd: 160,
   Mg: 200, Fe: 210, Mn: 220, Ni: 230, Co: 240, Zn: 250, Cu: 260, Al: 300, Cr: 310, V: 320, Sc: 330, Ti: 340, Zr: 350, Sn: 360, Si: 400, P: 410, B: 430,
-  O: 1000, F: 1010, Cl: 1020, OH: 1030, S: 1040, As: 1050, Sb: 1060, Se: 1070, Te: 1080
+  As: 500, Sb: 510, Bi: 520, Se: 530, Te: 540,
+  O: 1000, F: 1010, Cl: 1020, OH: 1030, S: 1040
 };
 
 export function generateEmpiricalFormula(results: CalculationResult[], options?: { mode: "element" | "oxide"; targetOxygen?: number; normalizationMode?: "stoichiometric-oxygen" | "element-ratio"; }): string {

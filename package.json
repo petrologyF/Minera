@@ -1,13 +1,18 @@
 {
-  "name": "minera",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@petrologyf/minera",
+  "version": "1.0.0",
+  "private": false,
+  "description": "Geochemical formula calculation and mineral identification tool.",
+  "author": "Asahi Fukumoto",
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "tsx src/lib/verify_test_md.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
