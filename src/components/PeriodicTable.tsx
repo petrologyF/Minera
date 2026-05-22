@@ -38,17 +38,15 @@ const renderFormula = (formula: string) => {
 
 const ElementCell = memo(({ 
   item, 
-  isSelected, 
+  selectedItems, 
   onToggle, 
   mode 
 }: { 
   item: ElementData; 
-  isSelected: boolean; 
+  selectedItems: string[]; 
   onToggle: (id: string) => void;
   mode: "element" | "oxide";
 }) => {
-  const displayValue = mode === "element" ? item.symbol : item.commonOxide;
-  
   if (mode === "oxide" && !item.commonOxide) {
     return (
       <div 
@@ -60,31 +58,47 @@ const ElementCell = memo(({
 
   const categoryClass = item.category ? CATEGORY_COLORS[item.category] : "bg-white border-gray-200 text-gray-700 hover:bg-gray-100";
 
-  return (
-    <div 
-      style={{ gridColumnStart: item.group, gridRowStart: item.period }}
-      className="p-0.5"
+  const renderToggle = (id: string, label: string, isSmall = false) => (
+    <Toggle
+      pressed={selectedItems.includes(id)}
+      onPressedChange={() => onToggle(id)}
+      aria-label={`${item.name} (${id})`}
+      className={cn(
+        "w-full flex flex-col items-center justify-center border rounded-sm transition-all duration-200",
+        "data-[state=on]:text-white shadow-sm",
+        categoryClass,
+        isSmall ? "h-7 min-h-0 py-0" : "h-full min-h-[50px]"
+      )}
     >
-      <Toggle
-        pressed={isSelected}
-        onPressedChange={() => onToggle(displayValue)}
-        aria-label={`${item.name} (${displayValue})`}
-        className={cn(
-          "w-full h-full min-h-[50px] flex flex-col items-center justify-center border rounded-sm transition-all duration-200",
-          "data-[state=on]:text-white shadow-sm",
-          categoryClass
-        )}
-      >
+      {!isSmall && (
         <span className={cn(
           "text-[10px] font-mono mb-0.5",
-          isSelected ? "text-white/80" : "text-gray-400"
+          selectedItems.includes(id) ? "text-white/80" : "text-gray-400"
         )}>
           {item.atomicNumber}
         </span>
-        <span className="text-sm font-bold leading-none">
-          {mode === "element" ? item.symbol : renderFormula(item.commonOxide)}
-        </span>
-      </Toggle>
+      )}
+      <span className={cn("font-bold leading-none", isSmall ? "text-[10px]" : "text-sm")}>
+        {renderFormula(label)}
+      </span>
+    </Toggle>
+  );
+
+  return (
+    <div 
+      style={{ gridColumnStart: item.group, gridRowStart: item.period }}
+      className="p-0.5 flex flex-col gap-0.5"
+    >
+      {mode === "element" ? (
+        renderToggle(item.symbol, item.symbol)
+      ) : (
+        <>
+          {renderToggle(item.commonOxide, item.commonOxide, !!item.alternativeOxides?.length)}
+          {item.alternativeOxides?.map(alt => (
+            renderToggle(alt, alt, true)
+          ))}
+        </>
+      )}
     </div>
   );
 });
@@ -94,12 +108,12 @@ ElementCell.displayName = "ElementCell";
 export const PeriodicTable = memo(({ selectedItems, onToggleItem, mode }: PeriodicTableProps) => {
   return (
     <div className="w-full overflow-x-auto pb-4 scrollbar-hide">
-      <div className="min-w-[900px] grid grid-cols-18 gap-0 p-1">
+      <div className="min-w-[900px] grid grid-cols-18 gap-0 p-1 auto-rows-fr">
         {periodicTableData.map((item) => (
           <ElementCell
             key={item.atomicNumber}
             item={item}
-            isSelected={selectedItems.includes(mode === "element" ? item.symbol : item.commonOxide)}
+            selectedItems={selectedItems}
             onToggle={onToggleItem}
             mode={mode}
           />

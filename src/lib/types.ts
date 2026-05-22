@@ -17,6 +17,7 @@ export interface ElementData {
   group: number;
   period: number;
   commonOxide: string;
+  alternativeOxides?: string[];
   atomicWeight: number;
   category?: ElementCategory;
 }

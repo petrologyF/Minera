@@ -236,6 +236,34 @@ const tests: {
     ],
     settings: { normalization: { mode: 'total-anions', targetValue: 3 } },
     expected: { "Fe": 2.000 }
+  },
+  {
+    id: "Q17 (Chromite - Separated Fe)",
+    mode: 'oxide',
+    input: [
+      { Item: "Cr2O3", "wt%": 47.05 },
+      { Item: "Al2O3", "wt%": 15.78 },
+      { Item: "Fe2O3", "wt%": 8.24 },
+      { Item: "FeO", "wt%": 18.53 },
+      { Item: "MgO", "wt%": 10.40 }
+    ],
+    settings: { targetOxygen: 4 },
+    expected: { "Cr": 1.200, "Al": 0.600, "Fe³⁺": 0.200, "Fe²⁺": 0.500, "Mg": 0.500 }
+  },
+  {
+    id: "Q18 (Augite - Separated Fe)",
+    mode: 'oxide',
+    input: [
+      { Item: "SiO2", "wt%": 51.30 },
+      { Item: "Al2O3", "wt%": 2.29 },
+      { Item: "Cr2O3", "wt%": 0.68 },
+      { Item: "Fe2O3", "wt%": 2.87 },
+      { Item: "FeO", "wt%": 3.87 },
+      { Item: "MgO", "wt%": 15.03 },
+      { Item: "CaO", "wt%": 23.94 }
+    ],
+    settings: { targetOxygen: 6 },
+    expected: { "Si": 1.900, "Al": 0.100, "Cr": 0.020, "Fe³⁺": 0.080, "Fe²⁺": 0.120, "Mg": 0.830, "Ca": 0.950 }
   }
 ];
 
