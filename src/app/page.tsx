@@ -18,12 +18,14 @@ export default function Home() {
   const [mode, setMode] = useState<"element" | "oxide">("oxide");
   const [wtPercents, setWtPercents] = useState<Record<string, number>>({});
   const [targetOxygen, setTargetOxygen] = useState<number>(4.0);
+  const [isFeEstimationEnabled, setIsFeEstimationEnabled] = useState<boolean>(false);
+  const [idealCations, setIdealCations] = useState<number>(3.0);
   const [results, setResults] = useState<CalculationResult[] | null>(null);
   const [formula, setFormula] = useState<string>("");
   const [candidates, setCandidates] = useState<{ name: string; score: number }[]>([]);
 
   // New normalization states
-  const [elNormMode, setElNormMode] = useState<"none" | "stoichiometric-oxygen" | "element-ratio">("none");
+  const [elNormMode, setElNormMode] = useState<"none" | "stoichiometric-oxygen" | "element-ratio" | "total-anions">("none");
   const [elTargetElement, setElTargetElement] = useState<string>("");
   const [elTargetValue, setElTargetValue] = useState<number>(1.0);
 
@@ -69,21 +71,26 @@ export default function Home() {
 
     let calcResults: CalculationResult[];
     if (mode === "oxide") {
-      calcResults = calculateOxideMode(input, atomicWeightsMap, targetOxygen);
+      calcResults = calculateOxideMode(
+        input, 
+        atomicWeightsMap, 
+        targetOxygen, 
+        isFeEstimationEnabled ? idealCations : undefined
+      );
       setResults(calcResults);
       setFormula(generateEmpiricalFormula(calcResults, { mode: "oxide", targetOxygen }));
     } else {
       const norm = elNormMode === "none" ? undefined : {
         mode: elNormMode,
-        targetValue: elNormMode === "stoichiometric-oxygen" ? targetOxygen : elTargetValue,
+        targetValue: elNormMode === "element-ratio" ? elTargetValue : targetOxygen,
         targetElement: elTargetElement
       };
       calcResults = calculateElementMode(input, atomicWeightsMap, norm);
       setResults(calcResults);
       setFormula(generateEmpiricalFormula(calcResults, { 
         mode: "element", 
-        targetOxygen: elNormMode === "stoichiometric-oxygen" ? targetOxygen : undefined,
-        normalizationMode: elNormMode === "none" ? undefined : elNormMode
+        targetOxygen: (elNormMode === "stoichiometric-oxygen" || elNormMode === "total-anions") ? targetOxygen : undefined,
+        normalizationMode: elNormMode === "none" ? undefined : (elNormMode === "total-anions" ? "element-ratio" : elNormMode) // element-ratio is closest for generic normalization in formula gen
       }));
     }
 
@@ -187,17 +194,48 @@ export default function Home() {
               
               <div className="space-y-4">
                 {mode === "oxide" ? (
-                  <div className="animate-in fade-in slide-in-from-top-1 duration-300">
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Oxygen Count</label>
-                    <input
-                      type="number"
-                      value={targetOxygen}
-                      onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
-                    />
-                    <p className="mt-2 text-[10px] text-gray-400 leading-relaxed">
-                      Used in Oxide mode to calculate cation ratios (e.g., 4 for Olivine, 24 for Garnet).
-                    </p>
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Oxygen Count</label>
+                      <input
+                        type="number"
+                        value={targetOxygen}
+                        onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                      />
+                      <p className="mt-2 text-[10px] text-gray-400 leading-relaxed">
+                        Used in Oxide mode to calculate cation ratios (e.g., 4 for Olivine, 24 for Garnet).
+                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Fe²⁺/Fe³⁺ Estimation</label>
+                        <input
+                          type="checkbox"
+                          checked={isFeEstimationEnabled}
+                          onChange={(e) => setIsFeEstimationEnabled(e.target.checked)}
+                          className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                        />
+                      </div>
+                      
+                      {isFeEstimationEnabled && (
+                        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Ideal Cation Count</label>
+                            <input
+                              type="number"
+                              value={idealCations}
+                              onChange={(e) => setIdealCations(parseFloat(e.target.value) || 0)}
+                              className="w-full bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                            />
+                            <p className="mt-2 text-[10px] text-gray-400 leading-relaxed">
+                              Ideal sum of cations for the mineral (e.g., 3 for Spinel, 8 for Garnet).
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
@@ -210,6 +248,7 @@ export default function Home() {
                       >
                         <option value="none">None (Raw Proportions)</option>
                         <option value="element-ratio">By Specific Element (e.g. S=1)</option>
+                        <option value="total-anions">By Total Anions (S+As+...)</option>
                         <option value="stoichiometric-oxygen">By Stoichiometric Oxygen</option>
                       </select>
                     </div>
@@ -241,9 +280,11 @@ export default function Home() {
                       </div>
                     )}
 
-                    {elNormMode === "stoichiometric-oxygen" && (
+                    {(elNormMode === "stoichiometric-oxygen" || elNormMode === "total-anions") && (
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Normalization Oxygen Count</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                          {elNormMode === "stoichiometric-oxygen" ? "Normalization Oxygen Count" : "Normalization Anion Count"}
+                        </label>
                         <input
                           type="number"
                           value={targetOxygen}

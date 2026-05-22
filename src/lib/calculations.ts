@@ -75,7 +75,7 @@ export function calculateElementMode(
   input: { Item: string; "wt%": number }[],
   atomicWeights: Record<string, number>,
   normalization?: {
-    mode: "stoichiometric-oxygen" | "element-ratio";
+    mode: "stoichiometric-oxygen" | "element-ratio" | "total-anions";
     targetValue: number;
     targetElement?: string;
   }
@@ -115,6 +115,20 @@ export function calculateElementMode(
     results.forEach(res => {
       res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * normFactor;
     });
+  } else if (normalization.mode === "total-anions") {
+    let totalAnionProp = 0;
+    results.forEach(res => {
+      const symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
+      const priority = CATION_ORDER[symbol] || 0;
+      if (priority >= 1000) {
+        totalAnionProp += res["Atomic Proportion"] || 0;
+      }
+    });
+
+    const normFactor = totalAnionProp > 0 ? normalization.targetValue / totalAnionProp : 0;
+    results.forEach(res => {
+      res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * normFactor;
+    });
   }
 
   return results;
@@ -123,9 +137,10 @@ export function calculateElementMode(
 export function calculateOxideMode(
   input: { Item: string; "wt%": number }[],
   atomicWeights: Record<string, number>,
-  targetOxygen: number
+  targetOxygen: number,
+  idealCations?: number
 ): CalculationResult[] {
-  const results: CalculationResult[] = input.map(row => {
+  let results: CalculationResult[] = input.map(row => {
     const mw = getMolecularWeight(row.Item, atomicWeights);
     const molProp = row["wt%"] / mw;
     
@@ -152,6 +167,51 @@ export function calculateOxideMode(
     res["Atomic Ratio"] = (res["Cation Proportion"] || 0) * normFactor;
   });
 
+  if (idealCations && idealCations > 0) {
+    const currentCationSum = results.reduce((sum, res) => sum + res["Atomic Ratio"], 0);
+    
+    // Droop (1987) method: Fe3+ = 2 * N * (1 - S/T)
+    // where N = targetOxygen, S = idealCations, T = currentCationSum (calculated assuming all Fe is Fe2+)
+    if (currentCationSum > idealCations) {
+      const fe3Atoms = 2 * targetOxygen * (1 - idealCations / currentCationSum);
+      
+      // Find the row containing Iron to split it
+      // We look for "Fe" in the formula
+      const feIndex = results.findIndex(res => res.Item.includes("Fe"));
+      
+      if (feIndex !== -1) {
+        const totalFeAtoms = results[feIndex]["Atomic Ratio"];
+        const cappedFe3 = Math.min(fe3Atoms, totalFeAtoms);
+        const fe2Atoms = totalFeAtoms - cappedFe3;
+
+        const feRow = results[feIndex];
+        const newResults = [...results];
+        
+        // Replace original Fe row with Fe2+ and Fe3+
+        // Note: We keep the original wt% and other fields in the first row or split them?
+        // Usually, in mineralogy tables, we show FeO and Fe2O3.
+        // For simplicity in the result table, we'll split the Atomic Ratio.
+        
+        newResults.splice(feIndex, 1, 
+          {
+            ...feRow,
+            Item: "FeO (est.)",
+            "Atomic Ratio": fe2Atoms
+          },
+          {
+            ...feRow,
+            Item: "Fe2O3 (est.)",
+            "Atomic Ratio": cappedFe3,
+            // Adjust proportions for display if needed, but Atomic Ratio is the key
+            "Cation Proportion": undefined, // Clear these as they are no longer simple molProps
+            "Oxygen Proportion": undefined
+          }
+        );
+        results = newResults;
+      }
+    }
+  }
+
   return results;
 }
 
@@ -176,7 +236,8 @@ export const CATION_ORDER: Record<string, number> = {
   Si: 400, P: 410, B: 430,
   
   // 5. Anions
-  O: 1000, F: 1010, Cl: 1020, OH: 1030, S: 1040 // S as anion (standard for sulfides)
+  O: 1000, F: 1010, Cl: 1020, OH: 1030, S: 1040,
+  As: 1050, Sb: 1060, Se: 1070, Te: 1080 // Sulfide/Sulfosalt anions
 };
 
 export function generateEmpiricalFormula(
@@ -192,14 +253,24 @@ export function generateEmpiricalFormula(
   results.forEach(res => {
     const ratio = res["Atomic Ratio"];
     if (ratio > 0.0001) {
-      const symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
-      const priority = CATION_ORDER[symbol] || 999;
+      let symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
+      
+      // Handle estimated Iron states
+      if (res.Item === "FeO (est.)") symbol = "Fe²⁺";
+      if (res.Item === "Fe2O3 (est.)") symbol = "Fe³⁺";
+      
+      const prioritySymbol = symbol.startsWith("Fe") ? "Fe" : symbol;
+      const priority = CATION_ORDER[prioritySymbol] || 999;
       const isAnion = priority >= 1000;
       elementsData.push({ priority, symbol, ratio, isAnion });
     }
   });
 
-  elementsData.sort((a, b) => a.priority - b.priority);
+  elementsData.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    // Tie-break for same priority (e.g. Fe2+ and Fe3+)
+    return a.symbol.localeCompare(b.symbol);
+  });
 
   const formatRatio = (num: number) => {
     // If it's effectively an integer (within a very tight tolerance), return as integer string
