@@ -11,10 +11,11 @@ import {
   generateStructuralFormula,
   identifyMineral,
   preParseMineralDb,
-  ESTIMATABLE_ELEMENTS
+  ESTIMATABLE_ELEMENTS,
+  calculateEndMembers
 } from "@/lib/calculations";
 import { mineralDb as rawMineralDb } from "@/lib/mineralDb";
-import { CalculationResult, IdentificationCandidate, OxideCalculationRow, ElementCalculationRow } from "@/lib/types";
+import { CalculationResult, IdentificationCandidate, OxideCalculationRow, ElementCalculationRow, EndMemberResult } from "@/lib/types";
 import { Download, Info, History as HistoryIcon, ArrowUpDown, Trash2, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,7 @@ export default function Home() {
   const [formula, setFormula] = useState<string>("");
   const [structuralFormula, setStructuralFormula] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<IdentificationCandidate[]>([]);
+  const [endMemberResult, setEndMemberResult] = useState<EndMemberResult | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
 
   const [elNormMode, setElNormMode] = useState<"none" | "stoichiometric-oxygen" | "element-ratio" | "total-anions">("none");
@@ -167,6 +169,13 @@ export default function Home() {
     setResults(calcResults);
     setCandidates(identified.slice(0, 5));
 
+    // End-member calculation
+    if (topCandidate) {
+      setEndMemberResult(calculateEndMembers(calcResults, topCandidate.nameEN));
+    } else {
+      setEndMemberResult(null);
+    }
+
     // Save to history
     const entry: HistoryEntry = {
       id: Math.random().toString(36).substring(2, 9),
@@ -201,6 +210,7 @@ export default function Home() {
     setElNormMode(entry.settings.elNormMode as any);
     setIsHistoryOpen(false);
     setResults(null);
+    setEndMemberResult(null);
   };
 
   const deleteHistoryEntry = (id: string, e: React.MouseEvent) => {
@@ -237,19 +247,28 @@ export default function Home() {
     });
   };
 
+  const totals = useMemo(() => {
+    if (!results) return null;
+    return results.reduce((acc, res) => ({
+      wt: acc.wt + res["wt%"],
+      cation: acc.cation + res["Atomic Ratio"],
+      oxygen: acc.oxygen + (res["Oxygen Ratio"] || 0)
+    }), { wt: 0, cation: 0, oxygen: 0 });
+  }, [results]);
+
   const exportToCSV = () => {
     if (!results) return;
     const headers = mode === "oxide" 
-      ? ["Item", "wt%", "Mol. Weight", "Mol. Prop", "Cation Prop", "Oxygen Prop", "Atomic Ratio"]
-      : ["Item", "wt%", "At. Weight", "At. Prop", "Atomic Ratio"];
+      ? ["Item", "wt%", "Mol. Weight", "Mol. Prop", "Cation Prop", "Oxygen Prop", "Oxy. Ratio", "At. Ratio"]
+      : ["Item", "wt%", "At. Weight", "At. Prop", "Oxy. Ratio", "At. Ratio"];
     
     const rows = results.map(res => {
       if (mode === "oxide") {
         const r = res as OxideCalculationRow;
-        return [r.Item, r["wt%"], r["Molecular Weight"], r["Molecular Proportion"], r["Cation Proportion"], r["Oxygen Proportion"], r["Atomic Ratio"]];
+        return [r.Item, r["wt%"], r["Molecular Weight"], r["Molecular Proportion"], r["Cation Proportion"], r["Oxygen Proportion"], r["Oxygen Ratio"], r["Atomic Ratio"]];
       } else {
         const r = res as ElementCalculationRow;
-        return [r.Item, r["wt%"], r["Atomic Weight"], r["Atomic Proportion"], r["Atomic Ratio"]];
+        return [r.Item, r["wt%"], r["Atomic Weight"], r["Atomic Proportion"], r["Oxygen Ratio"], r["Atomic Ratio"]];
       }
     });
 
@@ -457,13 +476,19 @@ export default function Home() {
               {mode === "oxide" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
                   <div>
-                    <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 text-center md:text-left">Normalized Oxygen Number</label>
-                    <input
-                      type="number"
-                      value={targetOxygen}
-                      onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-zinc-50 border border-zinc-300 rounded-sm px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all text-center md:text-left"
-                    />
+                    <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-3 text-center md:text-left italic">
+                      Normalization Basis
+                    </label>
+                    <div className="flex items-center justify-center md:justify-start gap-3">
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">On basis of</span>
+                      <input
+                        type="number"
+                        value={targetOxygen}
+                        onChange={(e) => setTargetOxygen(parseFloat(e.target.value) || 0)}
+                        className="w-20 bg-zinc-50 border border-zinc-300 rounded-sm px-2 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all text-center"
+                      />
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">oxygens</span>
+                    </div>
                   </div>
                   <div className="flex flex-col justify-center pt-2">
                     <div className="flex items-center justify-between mb-4">
@@ -586,6 +611,22 @@ export default function Home() {
                   </div>
                 )}
 
+                {endMemberResult && (
+                  <div className="space-y-6">
+                    <h2 className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 text-center border-b border-zinc-200 pb-4">End-member Notation</h2>
+                    <div className="bg-zinc-100 p-8 md:p-12 rounded-sm border border-zinc-200 flex items-center justify-center min-h-[100px] transition-all">
+                      <div className="text-3xl font-serif tracking-tighter text-zinc-900 select-all">
+                        {endMemberResult.notation.split(/(\d+)/).map((part, i) => 
+                          /^\d+$/.test(part) ? <sub key={i} className="text-[0.6em] ml-0.5 mr-0.5">{part}</sub> : <span key={i}>{part}</span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="mt-4 text-[10px] font-bold text-zinc-500 leading-relaxed italic text-center uppercase tracking-wider">
+                      Normalized for major end-members
+                    </p>
+                  </div>
+                )}
+
                 <div className="pt-6">
                   <h2 className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-6 px-1">Mineral Identification Candidates</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -653,8 +694,11 @@ export default function Home() {
                           <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em]">At. Prop</th>
                         </>
                       )}
+                      <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em] cursor-pointer hover:text-zinc-900 transition-colors">
+                        Oxy. Ratio
+                      </th>
                       <th className="py-4 px-4 text-[10px] font-black text-zinc-600 uppercase tracking-[0.15em] cursor-pointer hover:text-zinc-900 transition-colors" onClick={() => handleSort("Atomic Ratio")}>
-                        Atomic Ratio <ArrowUpDown size={10} className="inline ml-1" />
+                        At. Ratio <ArrowUpDown size={10} className="inline ml-1" />
                       </th>
                     </tr>
                   </thead>
@@ -676,10 +720,24 @@ export default function Home() {
                             <td className="py-5 px-4 text-xs font-mono text-zinc-600 group-hover:text-gray-900 transition-colors">{(res as ElementCalculationRow)["Atomic Proportion"]?.toPrecision(5)}</td>
                           </>
                         )}
+                        <td className="py-5 px-4 text-sm font-mono text-zinc-500 group-hover:text-zinc-900 transition-colors">
+                          {res["Oxygen Ratio"]?.toPrecision(5) || "-"}
+                        </td>
                         <td className="py-5 px-4 text-sm font-mono font-black text-zinc-950">{res["Atomic Ratio"].toPrecision(5)}</td>
                       </tr>
                     ))}
                   </tbody>
+                  {totals && (
+                    <tfoot className="bg-zinc-100 font-black border-t-2 border-zinc-200">
+                      <tr>
+                        <td className="py-5 px-4 text-[10px] uppercase tracking-widest text-zinc-900">Total Sum</td>
+                        <td className="py-5 px-4 text-sm font-mono">{totals.wt.toPrecision(5)}</td>
+                        {mode === "oxide" ? <td colSpan={4}></td> : <td colSpan={2}></td>}
+                        <td className="py-5 px-4 text-sm font-mono text-zinc-900">{totals.oxygen.toPrecision(6)}</td>
+                        <td className="py-5 px-4 text-sm font-mono text-zinc-950">{totals.cation.toPrecision(6)}</td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
             </section>

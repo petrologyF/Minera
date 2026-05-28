@@ -33,12 +33,14 @@ export interface OxideCalculationRow extends BaseCalculationRow {
   "Molecular Proportion": number;
   "Cation Proportion": number;
   "Oxygen Proportion": number;
+  "Oxygen Ratio": number;
 }
 
 export interface ElementCalculationRow extends BaseCalculationRow {
   "Atomic Weight": number;
   "Atomic Proportion": number;
   "Oxygen Proportion"?: number; // For stoichiometric oxygen mode
+  "Oxygen Ratio"?: number;
 }
 
 export type CalculationResult = OxideCalculationRow | ElementCalculationRow;
@@ -65,4 +67,9 @@ export interface IdentificationCandidate {
   formula: string;
   score: number;
   matchPercentage: number;
+}
+
+export interface EndMemberResult {
+  notation: string;
+  components: { symbol: string; percentage: number }[];
 }

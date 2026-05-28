@@ -1,4 +1,69 @@
-import { CalculationResult, MineralData, OxideCalculationRow, ElementCalculationRow, IdentificationCandidate } from "./types";
+import { CalculationResult, MineralData, OxideCalculationRow, ElementCalculationRow, IdentificationCandidate, EndMemberResult } from "./types";
+
+export function calculateEndMembers(results: CalculationResult[], mineralName: string): EndMemberResult | null {
+  const name = mineralName.toLowerCase();
+  let group: "olivine" | "pyroxene" | "feldspar" | null = null;
+  
+  if (name.includes("olivine") || name.includes("forsterite") || name.includes("fayalite") || name.includes("tephroite")) {
+    group = "olivine";
+  } else if (name.includes("pyroxene") || name.includes("diopside") || name.includes("hedenbergite") || name.includes("enstatite") || name.includes("ferrosilite") || name.includes("johannsenite") || name.includes("augite")) {
+    group = "pyroxene";
+  } else if (name.includes("feldspar") || name.includes("albite") || name.includes("anorthite") || name.includes("orthoclase") || name.includes("plagioclase")) {
+    group = "feldspar";
+  }
+
+  if (!group) return null;
+
+  const getRatio = (symbol: string) => {
+    return results
+      .filter(r => {
+        const itemSymbol = r.Item.match(/^([A-Z][a-z]*)/)?.[1];
+        return itemSymbol === symbol;
+      })
+      .reduce((sum, r) => sum + r["Atomic Ratio"], 0);
+  };
+
+  const components: { symbol: string; ratio: number }[] = [];
+  if (group === "olivine") {
+    components.push({ symbol: "Fo", ratio: getRatio("Mg") });
+    components.push({ symbol: "Fa", ratio: getRatio("Fe") });
+    components.push({ symbol: "Te", ratio: getRatio("Mn") });
+  } else if (group === "pyroxene") {
+    components.push({ symbol: "Wo", ratio: getRatio("Ca") });
+    components.push({ symbol: "En", ratio: getRatio("Mg") });
+    components.push({ symbol: "Fs", ratio: getRatio("Fe") });
+  } else if (group === "feldspar") {
+    components.push({ symbol: "An", ratio: getRatio("Ca") });
+    components.push({ symbol: "Ab", ratio: getRatio("Na") });
+    components.push({ symbol: "Or", ratio: getRatio("K") });
+  }
+
+  const sum = components.reduce((s, c) => s + c.ratio, 0);
+  if (sum < 0.001) return null;
+
+  const rawPercents = components.map(c => ({ symbol: c.symbol, percentage: (c.ratio / sum) * 100 }));
+  let rounded = rawPercents.map(p => ({ symbol: p.symbol, percentage: Math.round(p.percentage) }));
+  
+  // Normalization to 100
+  let totalRounded = rounded.reduce((s, p) => s + p.percentage, 0);
+  if (totalRounded !== 100 && totalRounded > 0) {
+    const diff = 100 - totalRounded;
+    // Find component with largest raw percentage to adjust
+    let maxIdx = 0;
+    for (let i = 1; i < rawPercents.length; i++) {
+      if (rawPercents[i].percentage > rawPercents[maxIdx].percentage) maxIdx = i;
+    }
+    rounded[maxIdx].percentage += diff;
+  }
+
+  // Filter out 0% components
+  const finalComponents = rounded.filter(p => p.percentage > 0);
+  if (finalComponents.length === 0) return null;
+
+  const notation = finalComponents.map(p => `${p.symbol}${p.percentage}`).join("");
+  
+  return { notation, components: finalComponents };
+}
 
 export function parseComplexFormula(formula: string): Record<string, number> {
   const parts = formula.replace(/\s/g, "").split(/[·・]/);
@@ -11,7 +76,8 @@ export function parseComplexFormula(formula: string): Record<string, number> {
         while (j < f.length && countOpen > 0) { if (f[j] === "(") countOpen++; else if (f[j] === ")") countOpen--; j++; }
         const inner = parsePart(f.substring(i + 1, j - 1)); i = j;
         const match = f.substring(i).match(/^(\d+(\.\d+)?)/);
-        let mult = match ? parseFloat(match[1]) : 1.0; if (match) i += match[1].length;
+        const mult = match ? parseFloat(match[1]) : 1.0; if (match) i += match[1].length;
+
         for (const [k, v] of Object.entries(inner)) res[k] = (res[k] || 0) + v * mult;
       } else if (f[i] === "," || f[i] === "-" || /[x-z]/.test(f[i])) { i++; }
       else {
@@ -47,7 +113,7 @@ export const DEFAULT_VALENCES: Record<string, number> = {
 export function calculateElementMode(input: { Item: string; "wt%": number }[], atomicWeights: Record<string, number>, normalization?: { mode: "stoichiometric-oxygen" | "element-ratio" | "total-anions"; targetValue: number; targetElement?: string; }): ElementCalculationRow[] {
   const results: ElementCalculationRow[] = input.map(row => {
     const weight = atomicWeights[row.Item] || 0, prop = weight > 0 ? row["wt%"] / weight : 0;
-    return { Item: row.Item, "wt%": row["wt%"], "Atomic Weight": weight, "Atomic Proportion": prop, "Atomic Ratio": prop };
+    return { Item: row.Item, "wt%": row["wt%"], "Atomic Weight": weight, "Atomic Proportion": prop, "Atomic Ratio": prop, "Oxygen Ratio": 0 };
   });
   if (!normalization) return results;
   if (normalization.mode === "stoichiometric-oxygen") {
@@ -57,7 +123,10 @@ export function calculateElementMode(input: { Item: string; "wt%": number }[], a
       res["Oxygen Proportion"] = oProp; totalOProp += oProp;
     });
     const norm = totalOProp > 0 ? normalization.targetValue / totalOProp : 0;
-    results.forEach(res => { res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * norm; });
+    results.forEach(res => { 
+      res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * norm; 
+      res["Oxygen Ratio"] = (res["Oxygen Proportion"] || 0) * norm;
+    });
   } else if (normalization.mode === "element-ratio" && normalization.targetElement) {
     const targetProp = results.find(r => r.Item === normalization.targetElement)?.["Atomic Proportion"] || 0;
     const norm = targetProp > 0 ? normalization.targetValue / targetProp : 0;
@@ -100,7 +169,7 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
       }
     }
 
-    return { Item: label, "wt%": row["wt%"], "Molecular Weight": mw, "Molecular Proportion": molProp, "Cation Proportion": molProp * cationCount, "Oxygen Proportion": molProp * oCount, "Atomic Ratio": 0 };
+    return { Item: label, "wt%": row["wt%"], "Molecular Weight": mw, "Molecular Proportion": molProp, "Cation Proportion": molProp * cationCount, "Oxygen Proportion": molProp * oCount, "Atomic Ratio": 0, "Oxygen Ratio": 0 };
   });
 
   if (estimation && estimation.idealCations > 0) {
@@ -108,7 +177,10 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
     // 1. Normalize to ideal cation sum
     const totalCationProp = results.reduce((sum, res) => sum + (res["Cation Proportion"] || 0), 0);
     const norm = totalCationProp > 0 ? estimation.idealCations / totalCationProp : 0;
-    results.forEach(res => { res["Atomic Ratio"] = (res["Cation Proportion"] || 0) * norm; });
+    results.forEach(res => { 
+      res["Atomic Ratio"] = (res["Cation Proportion"] || 0) * norm; 
+      res["Oxygen Ratio"] = (res["Oxygen Proportion"] || 0) * norm;
+    });
 
     // 2. Calculate current charge with low valence
     const valences = ESTIMATABLE_ELEMENTS[estimation.elementSymbol];
@@ -135,7 +207,7 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
         const newResults = [...results];
         newResults.splice(targetIdx, 1, 
           { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vLow)} (est.)`, "Atomic Ratio": totalAtoms - cappedElevated },
-          { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vHigh)} (est.)`, "Atomic Ratio": cappedElevated, "Cation Proportion": 0, "Oxygen Proportion": 0 }
+          { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vHigh)} (est.)`, "Atomic Ratio": cappedElevated, "Cation Proportion": 0, "Oxygen Proportion": 0, "Oxygen Ratio": 0 }
         );
         results = newResults;
       }
@@ -144,7 +216,10 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
     // Standard Oxygen-based normalization
     const totalOProp = results.reduce((sum, res) => sum + (res["Oxygen Proportion"] || 0), 0);
     const norm = totalOProp > 0 ? targetOxygen / totalOProp : 0;
-    results.forEach(res => { res["Atomic Ratio"] = (res["Cation Proportion"] || 0) * norm; });
+    results.forEach(res => { 
+      res["Atomic Ratio"] = (res["Cation Proportion"] || 0) * norm; 
+      res["Oxygen Ratio"] = (res["Oxygen Proportion"] || 0) * norm;
+    });
   }
   return results;
 }
