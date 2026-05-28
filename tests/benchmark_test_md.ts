@@ -15,11 +15,24 @@ periodicTableData.forEach(item => {
   atomicWeights[item.symbol] = item.atomicWeight;
 });
 
+interface TestSettings {
+  targetOxygen?: number;
+  normalization?: {
+    mode: 'stoichiometric-oxygen' | 'element-ratio' | 'total-anions';
+    targetValue: number;
+    targetElement?: string;
+  };
+  estimation?: {
+    idealCations: number;
+    elementSymbol: string;
+  };
+}
+
 function runProblem(
   name: string, 
   mode: 'oxide' | 'element', 
   input: { Item: string; "wt%": number }[], 
-  settings: any
+  settings: TestSettings
 ) {
   console.log(`\n=== Running Problem: ${name} ===`);
   let results: CalculationResult[];

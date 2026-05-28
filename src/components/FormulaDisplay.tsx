@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Copy, Check, Code } from "lucide-react";
+import { Check, Code } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FormulaDisplayProps {
@@ -16,7 +16,7 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({ formula, isDark 
     // Convert to LaTeX \ce{} format (mhchem)
     // 1. Convert ionic symbols: ²⁺ -> ^{2+}, ³⁺ -> ^{3+}, ⁴⁺ -> ^{4+}
     // 2. Wrap in \ce{...}
-    let latexFormula = formula
+    const latexFormula = formula
       .replace(/²⁺/g, "^{2+}")
       .replace(/³⁺/g, "^{3+}")
       .replace(/⁴⁺/g, "^{4+}")

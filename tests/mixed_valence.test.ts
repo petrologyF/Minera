@@ -2,13 +2,9 @@ import { test, expect, describe } from 'vitest';
 import { 
   calculateOxideMode, 
   generateEmpiricalFormula, 
-  identifyMineral,
-  preParseMineralDb
 } from '../src/lib/calculations';
 import { periodicTableData } from '../src/lib/periodicTableData';
-import { mineralDb as rawMineralDb } from '../src/lib/mineralDb';
 
-const mineralDb = preParseMineralDb(rawMineralDb);
 const atomicWeights: Record<string, number> = {};
 periodicTableData.forEach(item => {
   atomicWeights[item.symbol] = item.atomicWeight;

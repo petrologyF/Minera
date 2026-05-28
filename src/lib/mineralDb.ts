@@ -157,29 +157,29 @@ export const mineralDb: MineralData[] = [
   { category: "シクロ珪酸塩鉱物", nameJA: "鉄電気石", nameEN: "schorl", formula: "NaFe3Al6(BO3)3Si6O18(OH)4" },
   { category: "シクロ珪酸塩鉱物", nameJA: "大隅石", nameEN: "osumilite", formula: "(K,Na,Ca)Fe2Al3(Si10Al2O30)・H2O" },
   { category: "イノ珪酸塩鉱物", nameJA: "透輝石", nameEN: "diopside", formula: "CaMgSi2O6", sites: [
-    { name: "M2", capacity: 1, elements: ["Ca", "Na", "Mn²⁺", "Fe²⁺", "Mg"] },
-    { name: "M1", capacity: 1, elements: ["Mg", "Fe²⁺", "Fe³⁺", "Al", "Cr", "Ti⁴⁺"] },
-    { name: "T", capacity: 2, elements: ["Si", "Al"] }
+    { name: "T", capacity: 2, elements: ["Si", "Al"] },
+    { name: "M1", capacity: 1, elements: ["Al", "Fe³⁺", "Ti⁴⁺", "Cr", "Mg", "Fe²⁺", "Mn²⁺"] },
+    { name: "M2", capacity: 1, elements: ["Ca", "Na", "Mn²⁺", "Fe²⁺", "Mg"] }
   ]},
   { category: "イノ珪酸塩鉱物", nameJA: "ヘデンベルグ輝石", nameEN: "hedenbergite", formula: "CaFeSi2O6", sites: [
-    { name: "M2", capacity: 1, elements: ["Ca", "Na", "Mn²⁺", "Fe²⁺", "Mg"] },
-    { name: "M1", capacity: 1, elements: ["Fe²⁺", "Mg", "Fe³⁺", "Al", "Cr", "Ti⁴⁺"] },
-    { name: "T", capacity: 2, elements: ["Si", "Al"] }
+    { name: "T", capacity: 2, elements: ["Si", "Al"] },
+    { name: "M1", capacity: 1, elements: ["Al", "Fe³⁺", "Ti⁴⁺", "Cr", "Fe²⁺", "Mg", "Mn²⁺"] },
+    { name: "M2", capacity: 1, elements: ["Ca", "Na", "Mn²⁺", "Fe²⁺", "Mg"] }
   ]},
   { category: "イノ珪酸塩鉱物", nameJA: "ヨハンセン輝石", nameEN: "johannsenite", formula: "CaMnSi2O6", sites: [
-    { name: "M2", capacity: 1, elements: ["Ca", "Na", "Mn²⁺"] },
-    { name: "M1", capacity: 1, elements: ["Mn²⁺", "Fe²⁺", "Mg"] },
-    { name: "T", capacity: 2, elements: ["Si", "Al"] }
+    { name: "T", capacity: 2, elements: ["Si", "Al"] },
+    { name: "M1", capacity: 1, elements: ["Al", "Fe³⁺", "Ti⁴⁺", "Cr", "Mn²⁺", "Fe²⁺", "Mg"] },
+    { name: "M2", capacity: 1, elements: ["Ca", "Na", "Mn²⁺"] }
   ]},
   { category: "イノ珪酸塩鉱物", nameJA: "ひすい輝石", nameEN: "jadeite", formula: "NaAlSi2O6", sites: [
-    { name: "M2", capacity: 1, elements: ["Na", "Ca"] },
+    { name: "T", capacity: 2, elements: ["Si", "Al"] },
     { name: "M1", capacity: 1, elements: ["Al", "Fe³⁺", "Cr", "Mg", "Fe²⁺"] },
-    { name: "T", capacity: 2, elements: ["Si", "Al"] }
+    { name: "M2", capacity: 1, elements: ["Na", "Ca"] }
   ]},
   { category: "イノ珪酸塩鉱物", nameJA: "エジリン輝石", nameEN: "aegirine", formula: "NaFeSi2O6", sites: [
-    { name: "M2", capacity: 1, elements: ["Na", "Ca"] },
+    { name: "T", capacity: 2, elements: ["Si", "Al"] },
     { name: "M1", capacity: 1, elements: ["Fe³⁺", "Al", "Ti⁴⁺", "V³⁺", "Mg", "Fe²⁺"] },
-    { name: "T", capacity: 2, elements: ["Si", "Al"] }
+    { name: "M2", capacity: 1, elements: ["Na", "Ca"] }
   ]},
   { category: "イノ珪酸塩鉱物", nameJA: "珪灰石", nameEN: "wollastonite", formula: "Ca3Si3O9" },
   { category: "イノ珪酸塩鉱物", nameJA: "ばら輝石", nameEN: "rhodonite", formula: "(Mn,Ca)5Si5O15" },
@@ -233,20 +233,25 @@ export const mineralDb: MineralData[] = [
   { category: "ネソ珪酸塩鉱物", nameJA: "チタナイト", nameEN: "titanite", formula: "CaTiSiO5" },
   { category: "ネソ珪酸塩鉱物", nameJA: "トパーズ", nameEN: "topaz", formula: "Al2SiO4(F,OH)2" },
   { category: "ネソ珪酸塩鉱物", nameJA: "十字石", nameEN: "staurolite", formula: "Fe2Al9Si4O22(OH)2" },
+  { category: "イノ珪酸塩鉱物", nameJA: "普通輝石", nameEN: "augite", formula: "(Ca,Na)(Mg,Fe,Al,Ti)(Si,Al)2O6", sites: [
+    { name: "T", capacity: 2, elements: ["Si", "Al"] },
+    { name: "M1", capacity: 1, elements: ["Al", "Fe³⁺", "Ti⁴⁺", "Cr", "Mg", "Fe²⁺", "Mn²⁺"] },
+    { name: "M2", capacity: 1, elements: ["Ca", "Na", "Mn²⁺", "Fe²⁺", "Mg"] }
+  ]},
   { category: "イノ珪酸塩鉱物", nameJA: "頑火輝石", nameEN: "enstatite", formula: "Mg2Si2O6", sites: [
-    { name: "M2", capacity: 1, elements: ["Mg", "Fe²⁺", "Ca", "Mn²⁺", "Na"] },
-    { name: "M1", capacity: 1, elements: ["Mg", "Fe²⁺", "Fe³⁺", "Al", "Cr", "Ti⁴⁺"] },
-    { name: "T", capacity: 2, elements: ["Si", "Al"] }
+    { name: "T", capacity: 2, elements: ["Si", "Al"] },
+    { name: "M1", capacity: 1, elements: ["Al", "Fe³⁺", "Ti⁴⁺", "Cr", "Mg", "Fe²⁺", "Mn²⁺"] },
+    { name: "M2", capacity: 1, elements: ["Mg", "Fe²⁺", "Ca", "Mn²⁺", "Na"] }
   ]},
   { category: "イノ珪酸塩鉱物", nameJA: "鉄輝石", nameEN: "ferrosilite", formula: "Fe2Si2O6", sites: [
-    { name: "M2", capacity: 1, elements: ["Fe²⁺", "Mg", "Ca", "Mn²⁺", "Na"] },
-    { name: "M1", capacity: 1, elements: ["Fe²⁺", "Mg", "Fe³⁺", "Al", "Cr", "Ti⁴⁺"] },
-    { name: "T", capacity: 2, elements: ["Si", "Al"] }
+    { name: "T", capacity: 2, elements: ["Si", "Al"] },
+    { name: "M1", capacity: 1, elements: ["Al", "Fe³⁺", "Ti⁴⁺", "Cr", "Fe²⁺", "Mg", "Mn²⁺"] },
+    { name: "M2", capacity: 1, elements: ["Fe²⁺", "Mg", "Ca", "Mn²⁺", "Na"] }
   ]},
   { category: "イノ珪酸塩鉱物", nameJA: "リチア輝石", nameEN: "spodumene", formula: "LiAlSi2O6", sites: [
-    { name: "M2", capacity: 1, elements: ["Li", "Na"] },
+    { name: "T", capacity: 2, elements: ["Si", "Al"] },
     { name: "M1", capacity: 1, elements: ["Al", "Fe³⁺"] },
-    { name: "T", capacity: 2, elements: ["Si"] }
+    { name: "M2", capacity: 1, elements: ["Li", "Na"] }
   ]},
   { category: "イノ珪酸塩鉱物", nameJA: "藍閃石", nameEN: "glaucophane", formula: "Na2Mg3Al2Si8O22(OH)2" },
   { category: "フィロ珪酸塩鉱物", nameJA: "鉄雲母", nameEN: "annite", formula: "KFe3(AlSi3O10)(OH,F)2" },

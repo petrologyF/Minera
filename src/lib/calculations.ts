@@ -10,6 +10,8 @@ export function calculateEndMembers(results: CalculationResult[], mineralName: s
     group = "pyroxene";
   } else if (name.includes("feldspar") || name.includes("albite") || name.includes("anorthite") || name.includes("orthoclase") || name.includes("plagioclase")) {
     group = "feldspar";
+  } else if (name.includes("garnet") || name.includes("pyrope") || name.includes("almandine") || name.includes("spessartine") || name.includes("grossular") || name.includes("andradite") || name.includes("uvarovite")) {
+    group = "garnet";
   }
 
   if (!group) return null;
@@ -36,16 +38,27 @@ export function calculateEndMembers(results: CalculationResult[], mineralName: s
     components.push({ symbol: "An", ratio: getRatio("Ca") });
     components.push({ symbol: "Ab", ratio: getRatio("Na") });
     components.push({ symbol: "Or", ratio: getRatio("K") });
+  } else if (group === "garnet") {
+    // Pyr (Pyrope) - Mg
+    // Alm (Almandine) - Fe
+    // Spe (Spessartine) - Mn
+    // Gro (Grossular) - Ca (with Al)
+    // And (Andradite) - Ca (with Fe3+)
+    // Uva (Uvarovite) - Ca (with Cr)
+    components.push({ symbol: "Py", ratio: getRatio("Mg") });
+    components.push({ symbol: "Al", ratio: getRatio("Fe") });
+    components.push({ symbol: "Sp", ratio: getRatio("Mn") });
+    components.push({ symbol: "Gr", ratio: getRatio("Ca") });
   }
 
   const sum = components.reduce((s, c) => s + c.ratio, 0);
   if (sum < 0.001) return null;
 
   const rawPercents = components.map(c => ({ symbol: c.symbol, percentage: (c.ratio / sum) * 100 }));
-  let rounded = rawPercents.map(p => ({ symbol: p.symbol, percentage: Math.round(p.percentage) }));
+  const rounded = rawPercents.map(p => ({ symbol: p.symbol, percentage: Math.round(p.percentage) }));
   
   // Normalization to 100
-  let totalRounded = rounded.reduce((s, p) => s + p.percentage, 0);
+  const totalRounded = rounded.reduce((s, p) => s + p.percentage, 0);
   if (totalRounded !== 100 && totalRounded > 0) {
     const diff = 100 - totalRounded;
     // Find component with largest raw percentage to adjust
@@ -89,11 +102,10 @@ export function parseComplexFormula(formula: string): Record<string, number> {
     return res;
   }
   parts.forEach((part, index) => {
-    let mult = 1.0, formulaPart = part;
-    if (index > 0) {
-      const match = part.match(/^(\d+(\.\d+)?|n)/);
-      if (match) { mult = (match[1] === 'n') ? 1.0 : parseFloat(match[1]); formulaPart = part.substring(match[0].length); }
-    }
+    const match = index > 0 ? part.match(/^(\d+(\.\d+)?|n)/) : null;
+    const mult = match ? (match[1] === 'n' ? 1.0 : parseFloat(match[1])) : 1.0;
+    const formulaPart = match ? part.substring(match[0].length) : part;
+
     const partRes = parsePart(formulaPart);
     for (const [k, v] of Object.entries(partRes)) totalRes[k] = (totalRes[k] || 0) + v * mult;
   });
@@ -257,44 +269,54 @@ export function generateStructuralFormula(results: CalculationResult[], mineral:
   if (!mineral.sites) return generateEmpiricalFormula(results);
 
   const formatR = (num: number) => {
-    if (Math.abs(num - Math.round(num)) < 0.00001) return Math.round(num) === 1 ? "" : Math.round(num).toString();
-    let f = num.toPrecision(4); if (f.includes(".")) f = f.replace(/\.?0+$/, ""); return f === "1" ? "" : f;
+    if (num < 0.001) return "";
+    let f = num.toFixed(3);
+    if (f.includes(".")) f = f.replace(/\.?0+$/, "");
+    return f === "1" ? "" : f;
   };
 
-  const assignedItems = new Set<string>();
+  const remainingRatios: Record<string, number> = {};
+  results.forEach(r => { remainingRatios[r.Item] = r["Atomic Ratio"]; });
+
   const siteFormulas: string[] = [];
 
   mineral.sites.forEach(site => {
     const siteElements: { symbol: string; ratio: number }[] = [];
-    let siteTotal = 0;
+    let siteFill = 0;
 
     site.elements.forEach(el => {
-      // Find match by comparing base symbol or explicit ion label
-      const match = results.find(r => {
-        const itemBase = r.Item.replace(/[²³⁴⁵]⁺$/, "");
-        return r.Item === el || itemBase === el;
+      const matchKey = Object.keys(remainingRatios).find(key => {
+        const itemBase = key.replace(/[²³⁴⁵]⁺$/, "");
+        return key === el || itemBase === el;
       });
-      
-      if (match) {
-        siteElements.push({ symbol: el, ratio: match["Atomic Ratio"] });
-        siteTotal += match["Atomic Ratio"];
-        assignedItems.add(match.Item);
+
+      if (matchKey && remainingRatios[matchKey] > 0.001) {
+        const available = remainingRatios[matchKey];
+        const needed = site.capacity - siteFill;
+        if (needed > 0) {
+          // Add a small epsilon to avoid precision issues blocking allocation
+          const allocate = Math.min(available, needed + 0.0001);
+          siteElements.push({ symbol: el, ratio: allocate > needed ? needed : allocate });
+          remainingRatios[matchKey] -= allocate > needed ? needed : allocate;
+          siteFill += allocate > needed ? needed : allocate;
+        }
       }
     });
 
     if (siteElements.length > 0) {
       const inner = siteElements.map(e => `${e.symbol}${formatR(e.ratio)}`).join("");
-      siteFormulas.push(`(${inner})${formatR(siteTotal)}`);
+      siteFormulas.push(`(${inner})`);
     }
   });
 
   // Handle remaining items (anions usually)
-  const remaining = results.filter(r => !assignedItems.has(r.Item) && r["Atomic Ratio"] > 0.0001);
   const anions: { priority: number; symbol: string; ratio: number }[] = [];
-  remaining.forEach(res => {
-    const symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
-    const priority = CATION_ORDER[symbol] || 999;
-    anions.push({ priority, symbol, ratio: res["Atomic Ratio"] });
+  Object.entries(remainingRatios).forEach(([key, ratio]) => {
+    if (ratio > 0.001) {
+      const symbol = key.match(/^([A-Z][a-z]*)/)?.[1] || key;
+      const priority = CATION_ORDER[symbol] || 999;
+      anions.push({ priority, symbol: key.replace(/[²³⁴⁵]⁺$/, ""), ratio });
+    }
   });
 
   // Add Oxygen if oxide mode

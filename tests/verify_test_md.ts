@@ -11,11 +11,24 @@ periodicTableData.forEach(item => {
   atomicWeights[item.symbol] = item.atomicWeight;
 });
 
+interface TestSettings {
+  targetOxygen?: number;
+  normalization?: {
+    mode: 'stoichiometric-oxygen' | 'element-ratio' | 'total-anions';
+    targetValue: number;
+    targetElement?: string;
+  };
+  estimation?: {
+    idealCations: number;
+    elementSymbol: string;
+  };
+}
+
 function runTest(
   id: string,
   mode: 'oxide' | 'element',
   input: { Item: string; "wt%": number }[],
-  settings: any,
+  settings: TestSettings,
   expected: Record<string, number>
 ) {
   console.log(`\n--- Test ${id} ---`);
@@ -60,7 +73,7 @@ const tests: {
   id: string;
   mode: 'oxide' | 'element';
   input: { Item: string; "wt%": number }[];
-  settings: any;
+  settings: TestSettings;
   expected: Record<string, number>;
 }[] = [
   {
@@ -269,7 +282,7 @@ const tests: {
 
 let allPassed = true;
 tests.forEach(t => {
-  if (!runTest(t.id, t.mode as any, t.input, t.settings, t.expected)) {
+  if (!runTest(t.id, t.mode as 'oxide' | 'element', t.input, t.settings, t.expected)) {
     allPassed = false;
   }
 });

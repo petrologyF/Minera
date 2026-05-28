@@ -96,13 +96,18 @@ const ElementCell = memo(({
         aria-label={`${item.name} (${item.symbol})`}
         className={cn(
           "w-full h-full flex flex-col items-center justify-center border rounded-sm transition-all duration-200 p-1 relative",
-          "data-[state=on]:text-white shadow-sm",
+          "data-[state=on]:text-white shadow-sm data-[state=on]:ring-2 data-[state=on]:ring-offset-2 data-[state=on]:ring-zinc-900 data-[state=on]:scale-110 data-[state=on]:z-10 font-bold data-[state=on]:shadow-lg",
           categoryClass
         )}
       >
+        {isSelected && (
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-zinc-900 text-white rounded-full flex items-center justify-center text-[8px] z-20 ring-1 ring-white">
+            ✓
+          </div>
+        )}
         <span className={cn(
-          "text-[9px] font-mono mb-0.5",
-          isSelected ? "text-white/80" : "text-gray-400"
+          "text-[9px] font-mono mb-0.5 transition-colors",
+          isSelected ? "text-white/90" : "text-gray-400"
         )}>
           {item.atomicNumber}
         </span>
@@ -112,10 +117,10 @@ const ElementCell = memo(({
         
         {mode === "oxide" && item.alternativeOxides?.length && (
           <div className={cn(
-            "absolute top-0.5 right-0.5 text-[8px] font-bold",
-            isSelected ? "text-white/60" : "text-gray-300"
+            "absolute bottom-0.5 right-0.5 text-[7px] font-black uppercase tracking-tighter",
+            isSelected ? "text-white/70" : "text-zinc-400"
           )}>
-            +
+            Multi
           </div>
         )}
       </Toggle>
@@ -154,7 +159,7 @@ ElementCell.displayName = "ElementCell";
 
 export const PeriodicTable = memo(({ selectedItems, onToggleItem, mode }: PeriodicTableProps) => {
   return (
-    <div className="w-full overflow-x-auto pb-4 scrollbar-hide">
+    <div className="w-full overflow-x-auto pb-4 scrollbar-hide periodic-table-container no-print">
       <div className="min-w-[950px] flex justify-center">
         <div className="grid grid-cols-18 gap-0 p-1">
           {periodicTableData.map((item) => (
