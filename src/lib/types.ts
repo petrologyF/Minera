@@ -73,3 +73,7 @@ export interface EndMemberResult {
   notation: string;
   components: { symbol: string; percentage: number }[];
 }
+
+export interface CalculationOptions {
+  rounding?: "standard" | "manual";
+}

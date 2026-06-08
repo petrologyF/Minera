@@ -38,6 +38,7 @@ interface HistoryEntry {
     estimationElement: string;
     idealCations: number;
     elNormMode: string;
+    roundingMode?: "standard" | "manual";
   };
 }
 
@@ -49,6 +50,7 @@ export default function Home() {
   const [isEstimationEnabled, setIsEstimationEnabled] = useState<boolean>(false);
   const [estimationElement, setEstimationElement] = useState<string>("Fe");
   const [idealCations, setIdealCations] = useState<number>(3.0);
+  const [roundingMode, setRoundingMode] = useState<"standard" | "manual">("standard");
   const [results, setResults] = useState<CalculationResult[] | null>(null);
   const [formula, setFormula] = useState<string>("");
   const [structuralFormula, setStructuralFormula] = useState<string | null>(null);
@@ -135,12 +137,15 @@ export default function Home() {
 
     let calcResults: CalculationResult[];
     let currentFormula = "";
+    const calcOptions = { rounding: roundingMode };
+
     if (mode === "oxide") {
       calcResults = calculateOxideMode(
         input, 
         atomicWeightsMap, 
         targetOxygen, 
-        isEstimationEnabled ? { idealCations, elementSymbol: estimationElement } : undefined
+        isEstimationEnabled ? { idealCations, elementSymbol: estimationElement } : undefined,
+        calcOptions
       );
       currentFormula = generateEmpiricalFormula(calcResults, { mode: "oxide", targetOxygen });
     } else {
@@ -149,7 +154,7 @@ export default function Home() {
         targetValue: elNormMode === "element-ratio" ? elTargetValue : targetOxygen,
         targetElement: elTargetElement
       };
-      calcResults = calculateElementMode(input, atomicWeightsMap, norm);
+      calcResults = calculateElementMode(input, atomicWeightsMap, norm, calcOptions);
       currentFormula = generateEmpiricalFormula(calcResults, { 
         mode: "element", 
         targetOxygen: (elNormMode === "stoichiometric-oxygen" || elNormMode === "total-anions") ? targetOxygen : undefined,
@@ -191,7 +196,8 @@ export default function Home() {
         isEstimationEnabled,
         estimationElement,
         idealCations,
-        elNormMode
+        elNormMode,
+        roundingMode
       }
     };
     setHistory(prev => [entry, ...prev].slice(0, 50));
@@ -209,6 +215,7 @@ export default function Home() {
     setEstimationElement(entry.settings.estimationElement);
     setIdealCations(entry.settings.idealCations);
     setElNormMode(entry.settings.elNormMode as "none" | "stoichiometric-oxygen" | "element-ratio" | "total-anions");
+    setRoundingMode(entry.settings.roundingMode || "standard");
     setIsHistoryOpen(false);
     setResults(null);
     setEndMemberResult(null);
@@ -482,8 +489,30 @@ export default function Home() {
 
           {/* 3. Calculation Settings */}
           <section ref={section3Ref} className="bg-zinc-50 border border-zinc-200 rounded-sm p-6 md:p-8 shadow-sm scroll-mt-8">
-            <div className="mb-8 border-b border-zinc-200 pb-6">
+            <div className="mb-8 border-b border-zinc-200 pb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <h2 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-600">3. Calculation Settings</h2>
+              <div className="flex items-center gap-4">
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Rounding</label>
+                <div className="flex bg-zinc-100 p-1 rounded-sm shadow-inner border border-zinc-200">
+                  <button
+                    onClick={() => setRoundingMode("standard")}
+                    className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-sm transition-all ${
+                      roundingMode === "standard" ? "bg-zinc-50 text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                    }`}
+                  >
+                    Standard
+                  </button>
+                  <button
+                    onClick={() => setRoundingMode("manual")}
+                    className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-sm transition-all ${
+                      roundingMode === "manual" ? "bg-zinc-50 text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                    }`}
+                    title="Matches manual calculation rounding steps (model answer style)"
+                  >
+                    Manual
+                  </button>
+                </div>
+              </div>
             </div>
             
             <div className="max-w-2xl mx-auto">

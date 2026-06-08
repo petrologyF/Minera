@@ -1,6 +1,17 @@
-import { CalculationResult, MineralData, OxideCalculationRow, ElementCalculationRow, IdentificationCandidate, EndMemberResult } from "./types";
+import { CalculationResult, MineralData, OxideCalculationRow, ElementCalculationRow, IdentificationCandidate, EndMemberResult, CalculationOptions } from "./types";
+
+function roundTo(value: number, decimals: number): number {
+  const p = Math.pow(10, decimals);
+  return Math.round(value * p) / p;
+}
+
+function truncateTo(value: number, decimals: number): number {
+  const p = Math.pow(10, decimals);
+  return Math.floor(value * p) / p;
+}
 
 export function calculateEndMembers(results: CalculationResult[], mineralName: string): EndMemberResult | null {
+// ... rest of the file ...
   const name = mineralName.toLowerCase();
   let group: "olivine" | "pyroxene" | "feldspar" | null = null;
   
@@ -122,46 +133,70 @@ export const DEFAULT_VALENCES: Record<string, number> = {
   Si: 4, Ti: 4, Al: 3, Fe: 2, Mn: 2, Mg: 2, Ca: 2, Na: 1, K: 1, Cr: 3, Ni: 2, Zn: 2, Cu: 2, P: 5, S: 6
 };
 
-export function calculateElementMode(input: { Item: string; "wt%": number }[], atomicWeights: Record<string, number>, normalization?: { mode: "stoichiometric-oxygen" | "element-ratio" | "total-anions"; targetValue: number; targetElement?: string; }): ElementCalculationRow[] {
+export function calculateElementMode(input: { Item: string; "wt%": number }[], atomicWeights: Record<string, number>, normalization?: { mode: "stoichiometric-oxygen" | "element-ratio" | "total-anions"; targetValue: number; targetElement?: string; }, options?: CalculationOptions): ElementCalculationRow[] {
+  const isManual = options?.rounding === "manual";
   const results: ElementCalculationRow[] = input.map(row => {
-    const weight = atomicWeights[row.Item] || 0, prop = weight > 0 ? row["wt%"] / weight : 0;
+    const weight = atomicWeights[row.Item] || 0;
+    let prop = weight > 0 ? row["wt%"] / weight : 0;
+    if (isManual) prop = roundTo(prop, 5);
     return { Item: row.Item, "wt%": row["wt%"], "Atomic Weight": weight, "Atomic Proportion": prop, "Atomic Ratio": prop, "Oxygen Ratio": 0 };
   });
   if (!normalization) return results;
   if (normalization.mode === "stoichiometric-oxygen") {
     let totalOProp = 0;
     results.forEach(res => {
-      const oProp = (res["Atomic Proportion"] || 0) * ((DEFAULT_VALENCES[res.Item] || 2) / 2.0);
+      let oProp = (res["Atomic Proportion"] || 0) * ((DEFAULT_VALENCES[res.Item] || 2) / 2.0);
+      if (isManual) oProp = roundTo(oProp, 5);
       res["Oxygen Proportion"] = oProp; totalOProp += oProp;
     });
-    const norm = totalOProp > 0 ? normalization.targetValue / totalOProp : 0;
+    if (isManual) totalOProp = roundTo(totalOProp, 5);
+    let norm = totalOProp > 0 ? normalization.targetValue / totalOProp : 0;
+    if (isManual) norm = truncateTo(norm, 3);
     results.forEach(res => { 
       res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * norm; 
       res["Oxygen Ratio"] = (res["Oxygen Proportion"] || 0) * norm;
+      if (isManual) {
+        res["Atomic Ratio"] = roundTo(res["Atomic Ratio"], 3);
+        res["Oxygen Ratio"] = roundTo(res["Oxygen Ratio"], 3);
+      }
     });
   } else if (normalization.mode === "element-ratio" && normalization.targetElement) {
     const targetProp = results.find(r => r.Item === normalization.targetElement)?.["Atomic Proportion"] || 0;
-    const norm = targetProp > 0 ? normalization.targetValue / targetProp : 0;
-    results.forEach(res => { res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * norm; });
+    let norm = targetProp > 0 ? normalization.targetValue / targetProp : 0;
+    if (isManual) norm = truncateTo(norm, 3);
+    results.forEach(res => { 
+      res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * norm; 
+      if (isManual) res["Atomic Ratio"] = roundTo(res["Atomic Ratio"], 3);
+    });
   } else if (normalization.mode === "total-anions") {
     let totalAnionProp = 0;
     results.forEach(res => {
       const symbol = res.Item.match(/^([A-Z][a-z]*)/)?.[1] || res.Item;
       if ((CATION_ORDER[symbol] || 0) >= 1000) totalAnionProp += res["Atomic Proportion"] || 0;
     });
-    const norm = totalAnionProp > 0 ? normalization.targetValue / totalAnionProp : 0;
-    results.forEach(res => { res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * norm; });
+    if (isManual) totalAnionProp = roundTo(totalAnionProp, 5);
+    let norm = totalAnionProp > 0 ? normalization.targetValue / totalAnionProp : 0;
+    if (isManual) norm = truncateTo(norm, 3);
+    results.forEach(res => { 
+      res["Atomic Ratio"] = (res["Atomic Proportion"] || 0) * norm; 
+      if (isManual) res["Atomic Ratio"] = roundTo(res["Atomic Ratio"], 3);
+    });
   }
   return results;
 }
 
 export const ESTIMATABLE_ELEMENTS: Record<string, [number, number]> = { Fe: [2, 3], Mn: [2, 3], Ti: [3, 4], Cr: [2, 3] };
 
-export function calculateOxideMode(input: { Item: string; "wt%": number }[], atomicWeights: Record<string, number>, targetOxygen: number, estimation?: { idealCations: number; elementSymbol: string; }): OxideCalculationRow[] {
+export function calculateOxideMode(input: { Item: string; "wt%": number }[], atomicWeights: Record<string, number>, targetOxygen: number, estimation?: { idealCations: number; elementSymbol: string; }, options?: CalculationOptions): OxideCalculationRow[] {
+  const isManual = options?.rounding === "manual";
   const formatV = (v: number) => v === 1 ? "" : (v === 2 ? "²⁺" : (v === 3 ? "³⁺" : (v === 4 ? "⁴⁺" : (v === 5 ? "⁵⁺" : ""))));
   
   let results: OxideCalculationRow[] = input.map(row => {
-    const mw = getMolecularWeight(row.Item, atomicWeights), molProp = mw > 0 ? row["wt%"] / mw : 0, counts = parseComplexFormula(row.Item);
+    const mw = getMolecularWeight(row.Item, atomicWeights);
+    let molProp = mw > 0 ? row["wt%"] / mw : 0;
+    if (isManual) molProp = roundTo(molProp, 5);
+
+    const counts = parseComplexFormula(row.Item);
     const oCount = counts["O"] || 0; delete counts["O"];
     const cationCount = Object.values(counts).reduce((a, b) => a + b, 0);
     
@@ -181,17 +216,31 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
       }
     }
 
-    return { Item: label, "wt%": row["wt%"], "Molecular Weight": mw, "Molecular Proportion": molProp, "Cation Proportion": molProp * cationCount, "Oxygen Proportion": molProp * oCount, "Atomic Ratio": 0, "Oxygen Ratio": 0 };
+    let cationProp = molProp * cationCount;
+    let oProp = molProp * oCount;
+    if (isManual) {
+      oProp = roundTo(oProp, 5);
+    }
+
+    return { Item: label, "wt%": row["wt%"], "Molecular Weight": mw, "Molecular Proportion": molProp, "Cation Proportion": cationProp, "Oxygen Proportion": oProp, "Atomic Ratio": 0, "Oxygen Ratio": 0 };
   });
 
   if (estimation && estimation.idealCations > 0) {
     // Mixed Valence Estimation (e.g. Droop 1987)
     // 1. Normalize to ideal cation sum
-    const totalCationProp = results.reduce((sum, res) => sum + (res["Cation Proportion"] || 0), 0);
-    const norm = totalCationProp > 0 ? estimation.idealCations / totalCationProp : 0;
+    let totalCationProp = results.reduce((sum, res) => sum + (res["Cation Proportion"] || 0), 0);
+    if (isManual) totalCationProp = roundTo(totalCationProp, 5);
+
+    let norm = totalCationProp > 0 ? estimation.idealCations / totalCationProp : 0;
+    if (isManual) norm = truncateTo(norm, 3);
+
     results.forEach(res => { 
       res["Atomic Ratio"] = (res["Cation Proportion"] || 0) * norm; 
       res["Oxygen Ratio"] = (res["Oxygen Proportion"] || 0) * norm;
+      if (isManual) {
+        res["Atomic Ratio"] = roundTo(res["Atomic Ratio"], 3);
+        res["Oxygen Ratio"] = roundTo(res["Oxygen Ratio"], 3);
+      }
     });
 
     // 2. Calculate current charge with low valence
@@ -217,20 +266,36 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
         const cappedElevated = Math.min(atomsToElevate, totalAtoms);
         const originalRow = results[targetIdx];
         const newResults = [...results];
+        
+        let elevatedRatio = cappedElevated;
+        let lowRatio = totalAtoms - cappedElevated;
+        if (isManual) {
+          elevatedRatio = roundTo(elevatedRatio, 3);
+          lowRatio = roundTo(lowRatio, 3);
+        }
+
         newResults.splice(targetIdx, 1, 
-          { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vLow)} (est.)`, "Atomic Ratio": totalAtoms - cappedElevated },
-          { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vHigh)} (est.)`, "Atomic Ratio": cappedElevated, "Cation Proportion": 0, "Oxygen Proportion": 0, "Oxygen Ratio": 0 }
+          { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vLow)} (est.)`, "Atomic Ratio": lowRatio },
+          { ...originalRow, Item: `${estimation.elementSymbol}${formatV(vHigh)} (est.)`, "Atomic Ratio": elevatedRatio, "Cation Proportion": 0, "Oxygen Proportion": 0, "Oxygen Ratio": 0 }
         );
         results = newResults;
       }
     }
   } else {
     // Standard Oxygen-based normalization
-    const totalOProp = results.reduce((sum, res) => sum + (res["Oxygen Proportion"] || 0), 0);
-    const norm = totalOProp > 0 ? targetOxygen / totalOProp : 0;
+    let totalOProp = results.reduce((sum, res) => sum + (res["Oxygen Proportion"] || 0), 0);
+    if (isManual) totalOProp = roundTo(totalOProp, 5);
+
+    let norm = totalOProp > 0 ? targetOxygen / totalOProp : 0;
+    if (isManual) norm = truncateTo(norm, 3);
+
     results.forEach(res => { 
       res["Atomic Ratio"] = (res["Cation Proportion"] || 0) * norm; 
       res["Oxygen Ratio"] = (res["Oxygen Proportion"] || 0) * norm;
+      if (isManual) {
+        res["Atomic Ratio"] = roundTo(res["Atomic Ratio"], 3);
+        res["Oxygen Ratio"] = roundTo(res["Oxygen Ratio"], 3);
+      }
     });
   }
   return results;
