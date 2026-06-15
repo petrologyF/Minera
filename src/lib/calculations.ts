@@ -11,9 +11,8 @@ function truncateTo(value: number, decimals: number): number {
 }
 
 export function calculateEndMembers(results: CalculationResult[], mineralName: string): EndMemberResult | null {
-// ... rest of the file ...
   const name = mineralName.toLowerCase();
-  let group: "olivine" | "pyroxene" | "feldspar" | null = null;
+  let group: "olivine" | "pyroxene" | "feldspar" | "garnet" | null = null;
   
   if (name.includes("olivine") || name.includes("forsterite") || name.includes("fayalite") || name.includes("tephroite")) {
     group = "olivine";
@@ -157,7 +156,7 @@ export function calculateElementMode(input: { Item: string; "wt%": number }[], a
       res["Oxygen Ratio"] = (res["Oxygen Proportion"] || 0) * norm;
       if (isManual) {
         res["Atomic Ratio"] = roundTo(res["Atomic Ratio"], 3);
-        res["Oxygen Ratio"] = roundTo(res["Oxygen Ratio"], 3);
+        res["Oxygen Ratio"] = roundTo(res["Oxygen Ratio"], 5);
       }
     });
   } else if (normalization.mode === "element-ratio" && normalization.targetElement) {
@@ -200,25 +199,14 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
     const oCount = counts["O"] || 0; delete counts["O"];
     const cationCount = Object.values(counts).reduce((a, b) => a + b, 0);
     
-    // Identify cation symbol and valence for labeling
-    const cationSymbol = Object.keys(counts)[0] || row.Item;
-    let label = cationSymbol;
-    if (Object.keys(counts).length === 1) {
-      if (cationSymbol === "Fe") {
-        if (row.Item === "Fe2O3") label = "Fe³⁺";
-        else if (row.Item === "FeO") label = "Fe²⁺";
-      } else if (cationSymbol === "Mn") {
-        if (row.Item === "MnO2") label = "Mn⁴⁺";
-        else if (row.Item === "Mn2O3") label = "Mn³⁺";
-        else if (row.Item === "MnO") label = "Mn²⁺";
-      } else if (cationSymbol === "Ti" && row.Item === "Ti2O3") {
-        label = "Ti³⁺";
-      }
-    }
+    // Use the original oxide form (row.Item) as the label to follow petrological standards.
+    // If estimation logic is applied later, those specific rows will get cation labels.
+    const label = row.Item;
 
     let cationProp = molProp * cationCount;
     let oProp = molProp * oCount;
     if (isManual) {
+      cationProp = roundTo(cationProp, 5);
       oProp = roundTo(oProp, 5);
     }
 
@@ -239,7 +227,7 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
       res["Oxygen Ratio"] = (res["Oxygen Proportion"] || 0) * norm;
       if (isManual) {
         res["Atomic Ratio"] = roundTo(res["Atomic Ratio"], 3);
-        res["Oxygen Ratio"] = roundTo(res["Oxygen Ratio"], 3);
+        res["Oxygen Ratio"] = roundTo(res["Oxygen Ratio"], 5);
       }
     });
 
@@ -294,7 +282,7 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
       res["Oxygen Ratio"] = (res["Oxygen Proportion"] || 0) * norm;
       if (isManual) {
         res["Atomic Ratio"] = roundTo(res["Atomic Ratio"], 3);
-        res["Oxygen Ratio"] = roundTo(res["Oxygen Ratio"], 3);
+        res["Oxygen Ratio"] = roundTo(res["Oxygen Ratio"], 5);
       }
     });
   }

@@ -40,7 +40,7 @@ function runProblem(
     results = calculateOxideMode(
       input, 
       atomicWeights, 
-      settings.targetOxygen, 
+      settings.targetOxygen ?? 0, 
       settings.estimation
     );
   } else {

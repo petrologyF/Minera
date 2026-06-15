@@ -62,20 +62,22 @@ export default function Home() {
   const [elTargetElement, setElTargetElement] = useState<string>("");
   const [elTargetValue, setElTargetValue] = useState<number>(1.0);
 
-  const [history, setHistory] = useState<HistoryEntry[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("minera-history");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.error("Failed to parse history", e);
-        }
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Load history from localStorage once on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("minera-history");
+    if (saved) {
+      try {
+        setHistory(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse history", e);
       }
     }
-    return [];
-  });
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    setHasLoadedHistory(true);
+  }, []);
 
   // Refs for auto-scrolling
   const section1Ref = useRef<HTMLElement>(null);
@@ -87,10 +89,12 @@ export default function Home() {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // Save history to localStorage whenever it changes
+  // Save history to localStorage whenever it changes, but only after initial load
   useEffect(() => {
-    localStorage.setItem("minera-history", JSON.stringify(history));
-  }, [history]);
+    if (hasLoadedHistory) {
+      localStorage.setItem("minera-history", JSON.stringify(history));
+    }
+  }, [history, hasLoadedHistory]);
 
   const atomicWeightsMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -260,8 +264,9 @@ export default function Home() {
     return results.reduce((acc, res) => ({
       wt: acc.wt + res["wt%"],
       cation: acc.cation + res["Atomic Ratio"],
-      oxygen: acc.oxygen + (res["Oxygen Ratio"] || 0)
-    }), { wt: 0, cation: 0, oxygen: 0 });
+      oxygen: acc.oxygen + (res["Oxygen Ratio"] || 0),
+      oxygenProp: acc.oxygenProp + ((res as OxideCalculationRow)["Oxygen Proportion"] || 0)
+    }), { wt: 0, cation: 0, oxygen: 0, oxygenProp: 0 });
   }, [results]);
 
   const exportToCSV = () => {
@@ -778,19 +783,19 @@ export default function Home() {
                           <td className="py-4 px-4 text-sm font-mono text-zinc-800">{res["wt%"].toFixed(2)}</td>
                           {mode === "oxide" ? (
                             <>
-                              <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden sm:table-cell">{(res as OxideCalculationRow)["Molecular Weight"]?.toFixed(2)}</td>
-                              <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden md:table-cell">{(res as OxideCalculationRow)["Molecular Proportion"]?.toFixed(4)}</td>
-                              <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden md:table-cell">{(res as OxideCalculationRow)["Cation Proportion"]?.toFixed(4)}</td>
-                              <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden lg:table-cell">{(res as OxideCalculationRow)["Oxygen Proportion"]?.toFixed(4)}</td>
+                              <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden sm:table-cell">{(res as OxideCalculationRow)["Molecular Weight"]?.toFixed(5)}</td>
+                              <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden md:table-cell">{(res as OxideCalculationRow)["Molecular Proportion"]?.toFixed(5)}</td>
+                              <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden md:table-cell">{(res as OxideCalculationRow)["Cation Proportion"]?.toFixed(5)}</td>
+                              <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden lg:table-cell">{(res as OxideCalculationRow)["Oxygen Proportion"]?.toFixed(5)}</td>
                             </>
                           ) : (
                             <>
                               <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden sm:table-cell">{(res as ElementCalculationRow)["Atomic Weight"]?.toFixed(2)}</td>
-                              <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden md:table-cell">{(res as ElementCalculationRow)["Atomic Proportion"]?.toFixed(4)}</td>
+                              <td className="py-4 px-4 text-xs font-mono text-zinc-600 hidden md:table-cell">{(res as ElementCalculationRow)["Atomic Proportion"]?.toFixed(5)}</td>
                             </>
                           )}
                           <td className="py-4 px-4 text-sm font-mono text-zinc-500 group-hover:text-zinc-900 transition-colors">
-                            {res["Oxygen Ratio"]?.toFixed(4) || "-"}
+                            {res["Oxygen Ratio"] !== undefined ? res["Oxygen Ratio"].toFixed(5) : "-"}
                           </td>
                           <td className="py-4 px-4 text-sm font-mono font-black text-zinc-950">{res["Atomic Ratio"].toFixed(4)}</td>
                         </tr>
@@ -806,7 +811,7 @@ export default function Home() {
                               <td className="hidden sm:table-cell"></td>
                               <td className="hidden md:table-cell"></td>
                               <td className="hidden md:table-cell"></td>
-                              <td className="hidden lg:table-cell"></td>
+                              <td className="py-4 px-4 text-sm font-mono text-zinc-900 hidden lg:table-cell">{totals.oxygenProp.toFixed(5)}</td>
                             </>
                           ) : (
                             <>
