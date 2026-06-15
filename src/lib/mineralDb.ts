@@ -105,6 +105,10 @@ export const mineralDb: MineralData[] = [
     { name: "M", capacity: 2, elements: ["Fe²⁺", "Mg", "Mn²⁺", "Ni", "Ca"] },
     { name: "T", capacity: 1, elements: ["Si", "Al"] }
   ]},
+  { category: "ネソ珪酸塩鉱物", nameJA: "テフロ石", nameEN: "tephroite", formula: "Mn2SiO4", sites: [
+    { name: "M", capacity: 2, elements: ["Mn²⁺", "Fe²⁺", "Mg", "Ni", "Ca"] },
+    { name: "T", capacity: 1, elements: ["Si", "Al"] }
+  ]},
   { category: "ネソ珪酸塩鉱物", nameJA: "モンチセリ石", nameEN: "monticellite", formula: "CaMgSiO4", sites: [
     { name: "M2", capacity: 1, elements: ["Ca", "Mn²⁺", "Sr"] },
     { name: "M1", capacity: 1, elements: ["Mg", "Fe²⁺", "Mn²⁺"] },

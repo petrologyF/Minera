@@ -199,9 +199,21 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
     const oCount = counts["O"] || 0; delete counts["O"];
     const cationCount = Object.values(counts).reduce((a, b) => a + b, 0);
     
-    // Use the original oxide form (row.Item) as the label to follow petrological standards.
-    // If estimation logic is applied later, those specific rows will get cation labels.
-    const label = row.Item;
+    // Identify cation symbol and valence for labeling/calculations
+    const cationSymbol = Object.keys(counts)[0] || row.Item;
+    let label = cationSymbol;
+    if (Object.keys(counts).length === 1) {
+      if (cationSymbol === "Fe") {
+        if (row.Item === "Fe2O3") label = "Fe³⁺";
+        else if (row.Item === "FeO") label = "Fe²⁺";
+      } else if (cationSymbol === "Mn") {
+        if (row.Item === "MnO2") label = "Mn⁴⁺";
+        else if (row.Item === "Mn2O3") label = "Mn³⁺";
+        else if (row.Item === "MnO") label = "Mn²⁺";
+      } else if (cationSymbol === "Ti" && row.Item === "Ti2O3") {
+        label = "Ti³⁺";
+      }
+    }
 
     let cationProp = molProp * cationCount;
     let oProp = molProp * oCount;
@@ -210,7 +222,7 @@ export function calculateOxideMode(input: { Item: string; "wt%": number }[], ato
       oProp = roundTo(oProp, 5);
     }
 
-    return { Item: label, "wt%": row["wt%"], "Molecular Weight": mw, "Molecular Proportion": molProp, "Cation Proportion": cationProp, "Oxygen Proportion": oProp, "Atomic Ratio": 0, "Oxygen Ratio": 0 };
+    return { Item: label, InputItem: row.Item, "wt%": row["wt%"], "Molecular Weight": mw, "Molecular Proportion": molProp, "Cation Proportion": cationProp, "Oxygen Proportion": oProp, "Atomic Ratio": 0, "Oxygen Ratio": 0 };
   });
 
   if (estimation && estimation.idealCations > 0) {

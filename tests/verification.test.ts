@@ -67,6 +67,18 @@ const problems: MineralProblem[] = [
       formulaMatch: /Mg0\.\d*Fe²⁺0\.\d*Fe³⁺0\.\d*Al1\.\d*O4/,
       mineralName: "スピネル"
     }
+  },
+  {
+    name: "Tephroite Olivine",
+    input: [
+      { Item: "SiO2", "wt%": 29.75 },
+      { Item: "MnO", "wt%": 70.25 }
+    ],
+    settings: { targetOxygen: 4 },
+    expected: {
+      formulaMatch: /Mn²⁺2Si\d*\.?\d*O4/,
+      mineralName: "テフロ石"
+    }
   }
 ];
 

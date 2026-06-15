@@ -26,6 +26,7 @@ export interface BaseCalculationRow {
   Item: string;
   "wt%": number;
   "Atomic Ratio": number;
+  InputItem?: string;
 }
 
 export interface OxideCalculationRow extends BaseCalculationRow {

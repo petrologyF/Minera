@@ -276,12 +276,13 @@ export default function Home() {
       : ["Item", "wt%", "At. Weight", "At. Prop", "Oxy. Ratio", "At. Ratio"];
     
     const rows = results.map(res => {
+      const displayItem = res.Item.includes("(est.)") ? res.Item : (res.InputItem || res.Item);
       if (mode === "oxide") {
         const r = res as OxideCalculationRow;
-        return [r.Item, r["wt%"], r["Molecular Weight"], r["Molecular Proportion"], r["Cation Proportion"], r["Oxygen Proportion"], r["Oxygen Ratio"], r["Atomic Ratio"]];
+        return [displayItem, r["wt%"], r["Molecular Weight"], r["Molecular Proportion"], r["Cation Proportion"], r["Oxygen Proportion"], r["Oxygen Ratio"], r["Atomic Ratio"]];
       } else {
         const r = res as ElementCalculationRow;
-        return [r.Item, r["wt%"], r["Atomic Weight"], r["Atomic Proportion"], r["Oxygen Ratio"], r["Atomic Ratio"]];
+        return [displayItem, r["wt%"], r["Atomic Weight"], r["Atomic Proportion"], r["Oxygen Ratio"], r["Atomic Ratio"]];
       }
     });
 
@@ -779,7 +780,9 @@ export default function Home() {
                     <tbody>
                       {sortedResults?.map((res, i) => (
                         <tr key={i} className="border-b border-zinc-200 hover:bg-zinc-100 transition-colors group">
-                          <td className="py-4 px-4 text-sm font-black text-zinc-900">{res.Item}</td>
+                          <td className="py-4 px-4 text-sm font-black text-zinc-900">
+                            {res.Item.includes("(est.)") ? res.Item : (res.InputItem || res.Item)}
+                          </td>
                           <td className="py-4 px-4 text-sm font-mono text-zinc-800">{res["wt%"].toFixed(2)}</td>
                           {mode === "oxide" ? (
                             <>
