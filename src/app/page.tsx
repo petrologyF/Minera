@@ -71,6 +71,7 @@ export default function Home() {
     const saved = localStorage.getItem("minera-history");
     if (saved) {
       try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setHistory(JSON.parse(saved));
       } catch (e) {
         console.error("Failed to parse history", e);
